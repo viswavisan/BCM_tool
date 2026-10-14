@@ -1,0 +1,209 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ResilienceOps Enterprise BCM Platform{% endblock %}</title>
+  <meta name="description" content="Enterprise Business Continuity Management (BCM) and Operational Resilience System compliant with ISO 22301 and DORA.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Vis.js Network for Dependency Graphs -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  
+  <!-- Custom BCM CSS -->
+  <link rel="stylesheet" href="{% static 'css/bcm.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="bcm-app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="bcm-sidebar">
+      <div class="bcm-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>ResilienceOps</h1>
+          <span class="brand-tag">Enterprise BCM</span>
+        </div>
+      </div>
+
+      <nav class="bcm-nav">
+        <div class="nav-section-title">Overview & Registries</div>
+        <a href="{% url 'dashboard' %}" class="nav-item {% if active_menu == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          </span>
+          <span>Executive Dashboard</span>
+        </a>
+        <a href="{% url 'services_list' %}" class="nav-item {% if active_menu == 'services' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </span>
+          <span>Critical Services</span>
+        </a>
+        <a href="{% url 'ict_third_party' %}" class="nav-item {% if active_menu == 'third_party' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <span>ICT 3rd-Party Register</span>
+        </a>
+        <a href="{% url 'dependencies_graph' %}" class="nav-item {% if active_menu == 'dependencies' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+          </span>
+          <span>Dependency Graph</span>
+        </a>
+
+        <div class="nav-section-title">Continuity & Analysis</div>
+        <a href="{% url 'bia_list' %}" class="nav-item {% if active_menu == 'bia' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </span>
+          <span>Impact Analysis (BIA)</span>
+        </a>
+        <a href="{% url 'bcp_list' %}" class="nav-item {% if active_menu == 'bcp' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+          </span>
+          <span>BC Plans & Runbooks</span>
+        </a>
+        <a href="{% url 'impact_engine' %}" class="nav-item {% if active_menu == 'impact' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 2.5V8l5 4-5 4v3.5L13 22l8-10-8-10Z"/><path d="M3 12h8"/></svg>
+          </span>
+          <span>Cascading Simulator</span>
+        </a>
+
+        <div class="nav-section-title">Testing & Remediation</div>
+        <a href="{% url 'scenarios_list' %}" class="nav-item {% if active_menu == 'scenarios' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+          </span>
+          <span>Scenario Library</span>
+        </a>
+        <a href="{% url 'rtep_tests' %}" class="nav-item {% if active_menu == 'rtep' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </span>
+          <span>RTEP Test Exercises</span>
+        </a>
+        <a href="{% url 'findings_list' %}" class="nav-item {% if active_menu == 'findings' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+          <span>Findings & CAPA</span>
+        </a>
+        <a href="{% url 'evidence_repository' %}" class="nav-item {% if active_menu == 'evidence' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          </span>
+          <span>Evidence Vault</span>
+        </a>
+
+        <div class="nav-section-title">Workflow & Intelligence</div>
+        <a href="{% url 'approval_queue' %}" class="nav-item {% if active_menu == 'approvals' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </span>
+          <span>Approvals Queue</span>
+          {% if pending_approvals > 0 %}
+          <span class="nav-badge badge-pulse">{{ pending_approvals }}</span>
+          {% endif %}
+        </a>
+        <a href="{% url 'resq_ai' %}" class="nav-item {% if active_menu == 'resq' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </span>
+          <span>ResQ AI Assistant</span>
+        </a>
+        <a href="{% url 'admin_audit' %}" class="nav-item {% if active_menu == 'admin' %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+          <span>Governance & Audit</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="compliance-badge">
+          <span class="status-dot"></span>
+          <span><strong>ISO 22301 & DORA</strong> Validated</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="bcm-main">
+      <header class="bcm-header">
+        <div class="header-left">
+          <h2 class="page-title">{% block page_title %}Operational Resilience Dashboard{% endblock %}</h2>
+        </div>
+        <div class="header-right">
+          <div class="role-switcher">
+            <span>Role:</span>
+            <span class="role-pill">Chief Risk & Resilience Officer</span>
+          </div>
+
+          <a href="{% url 'approval_queue' %}" class="header-action-btn" title="Pending Approvals">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span>Alerts</span>
+            {% if unread_notifications > 0 %}
+            <span class="nav-badge badge-tier1">{{ unread_notifications }}</span>
+            {% endif %}
+          </a>
+
+          <a href="{% url 'resq_ai' %}" class="header-action-btn resq-glow-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            <span>ResQ Copilot</span>
+          </a>
+        </div>
+      </header>
+
+      <main class="bcm-content">
+        {% if messages %}
+        <div class="alert-messages">
+          {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer;">&times;</button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- Global Modal Helper Script -->
+  <script>
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    }
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        event.target.classList.remove('active');
+      }
+    };
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

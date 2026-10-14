@@ -1,0 +1,124 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Workflow Approvals Queue | ResilienceOps{% endblock %}
+{% block page_title %}Governance & Approvals Workflow Queue{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Pending Decision & Sign-off Inbox
+      </div>
+      <div class="panel-subtitle">Formal dual-control approval gate for BIA assessments, continuity runbooks, and risk sign-offs</div>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Task Code</th>
+          <th>Decision Title</th>
+          <th>Workflow Item Type</th>
+          <th>Reference ID</th>
+          <th>Submitted By</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Submission Time</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td><strong>{{ task.task_code }}</strong></td>
+          <td>
+            <div style="font-weight:600; color:#fff;">{{ task.title }}</div>
+            <div style="font-size:0.78rem; color:var(--text-subtle);">{{ task.comments }}</div>
+          </td>
+          <td><span class="badge badge-neutral">{{ task.item_type }}</span></td>
+          <td><strong style="color:var(--accent-cyan);">{{ task.reference_id }}</strong></td>
+          <td style="font-size:0.85rem; color:var(--text-main);">{{ task.requested_by }}</td>
+          <td>
+            <span class="badge {% if task.priority == 'Urgent' %}badge-danger{% elif task.priority == 'High' %}badge-warning{% else %}badge-neutral{% endif %}">
+              {{ task.priority }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if task.status == 'Approved' %}badge-success{% elif task.status == 'Rejected' %}badge-danger{% else %}badge-warning{% endif %}">
+              {{ task.status }}
+            </span>
+          </td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ task.submitted_date|timesince }} ago</td>
+          <td>
+            {% if task.status == 'Pending' %}
+            <div style="display:flex; gap:6px;">
+              <button onclick="openDecisionModal('{{ task.id }}', '{{ task.task_code }}', 'approve')" class="btn btn-primary btn-sm" style="background:var(--success);">Approve</button>
+              <button onclick="openDecisionModal('{{ task.id }}', '{{ task.task_code }}', 'reject')" class="btn btn-danger btn-sm">Reject</button>
+            </div>
+            {% else %}
+            <span style="font-size:0.8rem; color:var(--text-muted);">&#10003; Actioned</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center; color:var(--text-muted); padding:30px;">All workflow approvals are up to date.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal for Approve / Reject Decision -->
+<div class="modal-overlay" id="decisionModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title"><span id="decisionActionText">Confirm Sign-off Decision</span>: <span id="modalTaskCode"></span></div>
+      <button onclick="closeModal('decisionModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="task_id" id="decisionTaskId">
+      <input type="hidden" name="action" id="decisionActionVal">
+      <div class="modal-body">
+        <p style="color:var(--text-main); font-size:0.92rem; margin-bottom:16px;" id="decisionPromptText">
+          Please provide signing comments or audit conditions for this governance decision.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Reviewer Audit Comments *</label>
+          <textarea name="comments" class="form-control" placeholder="Audit observations or rationale for sign-off..." required>Reviewed resilience parameters against policy requirements. Approved under delegated authority.</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('decisionModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="decisionSubmitBtn">Confirm & Record in Audit Log</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function openDecisionModal(id, code, action) {
+    document.getElementById('decisionTaskId').value = id;
+    document.getElementById('modalTaskCode').innerText = code;
+    document.getElementById('decisionActionVal').value = action;
+    
+    if (action === 'approve') {
+      document.getElementById('decisionActionText').innerText = 'Approve Request';
+      document.getElementById('decisionSubmitBtn').className = 'btn btn-primary';
+      document.getElementById('decisionSubmitBtn').innerText = 'Approve & Sign Off';
+    } else {
+      document.getElementById('decisionActionText').innerText = 'Reject Request';
+      document.getElementById('decisionSubmitBtn').className = 'btn btn-danger';
+      document.getElementById('decisionSubmitBtn').innerText = 'Reject Request';
+    }
+    openModal('decisionModal');
+  }
+</script>
+{% endblock %}

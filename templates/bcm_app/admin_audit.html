@@ -1,0 +1,150 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Governance & Audit Trail | ResilienceOps{% endblock %}
+{% block page_title %}System Governance & Immutable Audit Logs (DORA Art. 13){% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Total Audit Entries</span>
+      <div class="stat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+    </div>
+    <div class="stat-value">{{ total_logs }}</div>
+    <div class="stat-subtitle">All write operations tamper-logged</div>
+  </div>
+
+  <div class="stat-card card-success">
+    <div class="stat-header">
+      <span class="stat-title">Integrity Checksum</span>
+      <div class="stat-icon" style="color:var(--success)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color:var(--success)">Valid</div>
+    <div class="stat-subtitle">Cryptographic chain unbroken</div>
+  </div>
+
+  <div class="stat-card card-cyan">
+    <div class="stat-header">
+      <span class="stat-title">RBAC Roles Defined</span>
+      <div class="stat-icon" style="color:var(--accent-cyan)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color:var(--accent-cyan)">5 Roles</div>
+    <div class="stat-subtitle">Granular access matrix enforced</div>
+  </div>
+</div>
+
+<!-- Governance & Roles Matrix -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Role-Based Access Control (RBAC) Governance Matrix
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>System Role</th>
+          <th>BIA Assessment</th>
+          <th>BCP Authoring</th>
+          <th>RTEP Testing Execution</th>
+          <th>Attestation Sign-Off</th>
+          <th>Evidence Management</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:var(--accent-cyan)">BCM Manager / Lead</strong></td>
+          <td><span class="badge badge-success">Create / Edit</span></td>
+          <td><span class="badge badge-success">Create / Edit</span></td>
+          <td><span class="badge badge-success">Facilitate / Log</span></td>
+          <td><span class="badge badge-warning">Review</span></td>
+          <td><span class="badge badge-success">Full Control</span></td>
+        </tr>
+        <tr>
+          <td><strong style="color:#fff;">Critical Service Owner</strong></td>
+          <td><span class="badge badge-success">Initiate Draft</span></td>
+          <td><span class="badge badge-success">Author Steps</span></td>
+          <td><span class="badge badge-neutral">Participant</span></td>
+          <td><span class="badge badge-neutral">No</span></td>
+          <td><span class="badge badge-success">Upload Evidence</span></td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--danger)">Chief Risk Officer (CRO)</strong></td>
+          <td><span class="badge badge-success">Formal Sign-Off</span></td>
+          <td><span class="badge badge-success">Approve Runbook</span></td>
+          <td><span class="badge badge-success">Crisis Commander</span></td>
+          <td><span class="badge badge-success">Dual-Control Attest</span></td>
+          <td><span class="badge badge-neutral">Read-Only</span></td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--accent-purple)">Internal / External Auditor</strong></td>
+          <td><span class="badge badge-neutral">Audit Review</span></td>
+          <td><span class="badge badge-neutral">Audit Review</span></td>
+          <td><span class="badge badge-neutral">Inspect Results</span></td>
+          <td><span class="badge badge-neutral">No</span></td>
+          <td><span class="badge badge-success">Verify Cryptographic Hash</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Audit Trail Table -->
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Tamper-Evident System Audit Trail
+      </div>
+      <div class="panel-subtitle">Chronological record of state changes, attestation signatures, and drill executions</div>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Timestamp (UTC)</th>
+          <th>Actor / User</th>
+          <th>Action Type</th>
+          <th>Entity Class</th>
+          <th>Target Ref</th>
+          <th>Operation Details</th>
+          <th>Origin IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in audit_logs %}
+        <tr>
+          <td style="font-family:monospace; font-size:0.78rem; color:var(--text-muted); white-space:nowrap;">
+            {{ log.timestamp|date:"Y-m-d H:i:s" }}
+          </td>
+          <td><strong>{{ log.user }}</strong></td>
+          <td>
+            <span class="badge badge-neutral">{{ log.action }}</span>
+          </td>
+          <td style="font-size:0.8rem; color:var(--text-subtle);">{{ log.entity_type }}</td>
+          <td><strong style="color:var(--accent-cyan);">{{ log.entity_id }}</strong></td>
+          <td style="font-size:0.85rem; color:#fff;">{{ log.details }}</td>
+          <td style="font-family:monospace; font-size:0.78rem; color:var(--text-muted);">{{ log.ip_address }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">No audit events recorded.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

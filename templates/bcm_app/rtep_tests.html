@@ -1,0 +1,168 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}RTEP Resilience Testing Platform | ResilienceOps{% endblock %}
+{% block page_title %}Real-Time Exercise & Testing Platform (RTEP){% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Failover Exercises & Simulation Drills
+      </div>
+      <div class="panel-subtitle">Validation of RTO and RPO recovery commitments through live failover simulations</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('newTestModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Schedule Exercise Drill
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Exercise Code</th>
+          <th>Exercise Title</th>
+          <th>Target Service</th>
+          <th>Exercise Type</th>
+          <th>Scenario Applied</th>
+          <th>Target RTO</th>
+          <th>Actual Recovery</th>
+          <th>Status</th>
+          <th>Outcome</th>
+          <th>Execution</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tests %}
+        <tr>
+          <td><strong>{{ t.test_code }}</strong></td>
+          <td style="font-weight:600; color:#fff;">{{ t.title }}</td>
+          <td>
+            <a href="{% url 'service_detail' t.target_service.id %}" style="color:var(--accent-cyan); text-decoration:none;">
+              {{ t.target_service.name }}
+            </a>
+          </td>
+          <td><span class="badge badge-neutral">{{ t.exercise_type }}</span></td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ t.scenario.title|truncatechars:30 }}</td>
+          <td>{{ t.target_rto_minutes }} mins</td>
+          <td>
+            {% if t.actual_recovery_time_minutes %}
+            <strong style="color:{% if t.actual_recovery_time_minutes <= t.target_rto_minutes %}var(--success){% else %}var(--danger){% endif %};">
+              {{ t.actual_recovery_time_minutes }} mins
+            </strong>
+            {% else %}
+            <span style="color:var(--text-subtle);">--</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge {% if t.status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+              {{ t.status }}
+            </span>
+          </td>
+          <td>
+            {% if t.outcome == 'Successful' %}
+            <span class="badge badge-success">&#10003; Passed</span>
+            {% elif t.outcome == 'Partial Pass' %}
+            <span class="badge badge-warning">Partial Pass</span>
+            {% elif t.outcome == 'Failed' %}
+            <span class="badge badge-danger">Failed</span>
+            {% else %}
+            <span class="badge badge-neutral">Pending Drill</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'rtep_live_drill' t.id %}" class="btn {% if t.status == 'Completed' %}btn-secondary{% else %}btn-primary{% endif %} btn-sm">
+              {% if t.status == 'Completed' %}View Drill Log{% else %}Launch Live Drill &rarr;{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align:center; color:var(--text-muted); padding:30px;">No testing exercises scheduled.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal to schedule exercise -->
+<div class="modal-overlay" id="newTestModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Schedule Disaster Recovery Exercise Drill</div>
+      <button onclick="closeModal('newTestModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Exercise Code *</label>
+            <input type="text" name="test_code" class="form-control" placeholder="e.g. EX-2027-Q3-DR" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Exercise Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Zurich Secondary Cluster Live Promotion" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Target Service *</label>
+            <select name="service_id" class="form-control" required>
+              {% for s in services %}
+              <option value="{{ s.id }}">{{ s.code }} - {{ s.name }} (RTO: {{ s.rto_hours }}h)</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stress Scenario *</label>
+            <select name="scenario_id" class="form-control" required>
+              {% for scn in scenarios %}
+              <option value="{{ scn.id }}">{{ scn.code }} - {{ scn.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Exercise Type *</label>
+            <select name="exercise_type" class="form-control">
+              <option value="Simulation Drill">Simulation Drill</option>
+              <option value="Tabletop Walkthrough">Tabletop Walkthrough</option>
+              <option value="Full Failover Test">Full Failover Test</option>
+              <option value="Component Recovery Drill">Component Recovery Drill</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target RTO Threshold (Minutes) *</label>
+            <input type="number" name="target_rto_minutes" class="form-control" value="60" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Lead Facilitator / Commander *</label>
+            <input type="text" name="lead_facilitator" class="form-control" value="Incident Commander Weber" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Scheduled Date & Time *</label>
+            <input type="datetime-local" name="scheduled_date" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('newTestModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Schedule Exercise</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

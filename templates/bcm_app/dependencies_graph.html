@@ -1,0 +1,173 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Operational Dependency Graph & Lineage | ResilienceOps{% endblock %}
+{% block page_title %}Operational Dependency Graph & Architecture Lineage{% endblock %}
+
+{% block content %}
+<div class="panel" style="padding:18px 24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div class="panel-title" style="margin-bottom:4px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+        Interactive Service Dependency Topology
+      </div>
+      <div class="panel-subtitle">Visual mapping of mission-critical services, cloud infrastructure, and 3rd-party rails</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="display:flex; gap:12px; font-size:0.8rem; color:var(--text-muted);">
+        <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></span> Tier 1 (Critical)</span>
+        <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:50%; background:#f59e0b;"></span> Tier 2</span>
+        <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:50%; background:#6366f1;"></span> ICT Cloud/Vendor</span>
+      </div>
+      <button onclick="stabilizeGraph()" class="btn btn-secondary btn-sm">Reset Layout</button>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:3fr 1fr; gap:20px;">
+  <!-- Graph Canvas Container -->
+  <div class="panel" style="padding:0; overflow:hidden; position:relative; min-height:600px;">
+    <div id="dependencyNetwork" style="width:100%; height:620px; background:#080c16;"></div>
+    <div style="position:absolute; bottom:16px; left:16px; background:rgba(19, 27, 46, 0.85); backdrop-filter:blur(6px); border:1px solid var(--border-subtle); padding:8px 14px; border-radius:var(--radius-md); font-size:0.78rem; color:var(--text-muted);">
+      Drag nodes to explore &bull; Scroll to zoom &bull; Click node for lineage inspector
+    </div>
+  </div>
+
+  <!-- Node Inspector Sidebar -->
+  <div class="panel" id="nodeInspectorPanel">
+    <div class="panel-header">
+      <div class="panel-title" style="font-size:1.05rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+        Node Inspector
+      </div>
+    </div>
+    <div id="inspectorContent">
+      <div style="color:var(--text-muted); font-size:0.86rem; text-align:center; padding:40px 10px;">
+        Click any node in the topology to inspect its upstream & downstream impact lineage.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let network = null;
+  let allNodes = [];
+  let allLinks = [];
+
+  fetch("{% url 'api_dependencies_graph' %}")
+    .then(res => res.json())
+    .then(data => {
+      allNodes = data.nodes;
+      allLinks = data.links;
+      initNetwork(data.nodes, data.links);
+    });
+
+  function initNetwork(nodesData, linksData) {
+    const container = document.getElementById('dependencyNetwork');
+    
+    const visNodes = new vis.DataSet(nodesData.map(n => ({
+      id: n.id,
+      label: `${n.label}\n${n.name.substring(0, 18)}...`,
+      shape: n.type === 'vendor' ? 'hexagon' : 'dot',
+      size: n.type === 'vendor' ? 24 : (n.tier === 'Tier 1' ? 26 : 20),
+      color: {
+        background: n.color,
+        border: '#ffffff',
+        highlight: { background: '#06b6d4', border: '#ffffff' }
+      },
+      font: { color: '#ffffff', face: 'Inter', size: 11, multi: true },
+      borderWidth: 2,
+      raw: n
+    })));
+
+    const visEdges = new vis.DataSet(linksData.map((l, idx) => ({
+      id: idx,
+      from: l.source,
+      to: l.target,
+      arrows: 'to',
+      color: { color: 'rgba(255, 255, 255, 0.25)', highlight: '#06b6d4' },
+      width: l.criticality === 'Critical' ? 2.5 : 1.5,
+      dashes: l.type.includes('Third Party'),
+      raw: l
+    })));
+
+    const options = {
+      physics: {
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: {
+          gravitationalConstant: -70,
+          centralGravity: 0.015,
+          springLength: 140,
+          springConstant: 0.06
+        },
+        stabilization: { iterations: 120 }
+      },
+      interaction: {
+        hover: true,
+        tooltipDelay: 100
+      }
+    };
+
+    network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+    network.on('click', function(params) {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const selectedNode = visNodes.get(nodeId);
+        showInspector(selectedNode.raw);
+      }
+    });
+  }
+
+  function showInspector(node) {
+    const inspector = document.getElementById('inspectorContent');
+    const isVendor = node.type === 'vendor';
+    
+    // Find upstream and downstream links
+    const downEdges = allLinks.filter(l => l.source === node.id);
+    const upEdges = allLinks.filter(l => l.target === node.id);
+
+    let html = `
+      <div style="margin-bottom:16px;">
+        <span class="badge ${node.tier === 'Tier 1' ? 'badge-tier1' : (isVendor ? 'badge-neutral' : 'badge-tier2')}">${node.tier}</span>
+        <h3 style="font-family:var(--font-heading); color:#fff; font-size:1.2rem; margin-top:6px;">${node.name}</h3>
+        <div style="font-size:0.8rem; color:var(--text-subtle);">${node.label}</div>
+      </div>
+
+      <div style="background:var(--bg-surface-alt); padding:12px; border-radius:var(--radius-md); margin-bottom:16px;">
+        <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Recovery Objective</div>
+        <div style="font-size:1.1rem; font-weight:700; color:var(--accent-cyan);">${isVendor ? 'External Cloud SLA' : node.rto + ' Hours'}</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase; margin-bottom:8px;">Outgoing Dependencies (${downEdges.length})</div>
+        ${downEdges.length === 0 ? '<div style="font-size:0.8rem; color:var(--text-muted);">None</div>' : ''}
+        ${downEdges.map(e => `
+          <div style="font-size:0.8rem; padding:6px 8px; background:var(--bg-surface-alt); border-radius:var(--radius-sm); margin-bottom:6px;">
+            &rarr; <strong>${e.target.replace('svc_', 'SVC-').replace('vend_', 'VENDOR-')}</strong> (${e.type})
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase; margin-bottom:8px;">Dependent Upstream Services (${upEdges.length})</div>
+        ${upEdges.length === 0 ? '<div style="font-size:0.8rem; color:var(--text-muted);">None</div>' : ''}
+        ${upEdges.map(e => `
+          <div style="font-size:0.8rem; padding:6px 8px; background:var(--bg-surface-alt); border-radius:var(--radius-sm); margin-bottom:6px;">
+            &larr; <strong>${e.source.replace('svc_', 'SVC-')}</strong> (${e.criticality})
+          </div>
+        `).join('')}
+      </div>
+
+      <a href="{% url 'impact_engine' %}" class="btn btn-primary btn-sm" style="width:100%;">Run Disruption Simulation</a>
+    `;
+    inspector.innerHTML = html;
+  }
+
+  function stabilizeGraph() {
+    if (network) network.fit();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}{{ service.code }}: {{ service.name }} | Resilience Profile{% endblock %}
+{% block page_title %}Service Resilience Profile: {{ service.code }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{% url 'services_list' %}" class="btn btn-secondary btn-sm">
+    &larr; Back to Services Catalog
+  </a>
+</div>
+
+<!-- Header Card -->
+<div class="panel" style="border-left: 4px solid {% if service.tier == 'Tier 1' %}var(--danger){% elif service.tier == 'Tier 2' %}var(--warning){% else %}var(--success){% endif %};">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.6rem; color:#fff;">{{ service.name }}</h2>
+        <span class="badge {% if service.tier == 'Tier 1' %}badge-tier1{% elif service.tier == 'Tier 2' %}badge-tier2{% else %}badge-tier3{% endif %}">
+          {{ service.tier }}
+        </span>
+        <span class="badge badge-success">{{ service.status }}</span>
+      </div>
+      <p style="color:var(--text-muted); max-width:850px; font-size:0.92rem;">{{ service.description }}</p>
+    </div>
+    <div>
+      <a href="{% url 'impact_engine' %}" class="btn btn-secondary">Simulate Service Failure</a>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Owner / Lead</div>
+      <div style="font-weight:600; color:#fff; font-size:0.95rem;">{{ service.owner_name }}</div>
+      <div style="font-size:0.8rem; color:var(--text-muted);">{{ service.department }}</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Recovery Time (RTO)</div>
+      <div style="font-size:1.4rem; font-weight:700; color:var(--accent-cyan); font-family:var(--font-heading);">{{ service.rto_hours }}h</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Recovery Point (RPO)</div>
+      <div style="font-size:1.4rem; font-weight:700; color:#fff; font-family:var(--font-heading);">{{ service.rpo_hours }}h</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Max Disruption (MTPD)</div>
+      <div style="font-size:1.4rem; font-weight:700; color:var(--warning); font-family:var(--font-heading);">{{ service.mtpd_hours }}h</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Financial Exposure</div>
+      <div style="font-size:1.4rem; font-weight:700; color:var(--danger); font-family:var(--font-heading);">${{ service.financial_loss_per_hour|floatformat:0 }}<span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);">/hr</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="charts-dual-grid">
+  <!-- Downstream & Upstream Dependencies -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+        Operational Lineage & Dependencies
+      </div>
+      <a href="{% url 'dependencies_graph' %}" class="btn btn-secondary btn-sm">Interactive Graph</a>
+    </div>
+
+    <h4 style="font-size:0.82rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">This service depends on:</h4>
+    <div class="bcm-table-container" style="margin-bottom:20px;">
+      <table class="bcm-table">
+        <thead>
+          <tr>
+            <th>Dependency Target</th>
+            <th>Type</th>
+            <th>Criticality</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dep in downstream %}
+          <tr>
+            <td>
+              {% if dep.dependent_service %}
+              <strong><a href="{% url 'service_detail' dep.dependent_service.id %}" style="color:var(--accent-cyan); text-decoration:none;">{{ dep.dependent_service.name }}</a></strong>
+              {% elif dep.third_party %}
+              <strong><a href="{% url 'ict_third_party' %}" style="color:var(--primary); text-decoration:none;">{{ dep.third_party.name }}</a></strong>
+              {% endif %}
+            </td>
+            <td><span class="badge badge-neutral">{{ dep.dependency_type }}</span></td>
+            <td><span class="badge {% if dep.criticality == 'Critical' %}badge-tier1{% else %}badge-tier2{% endif %}">{{ dep.criticality }}</span></td>
+            <td style="font-size:0.8rem; color:var(--text-muted);">{{ dep.notes }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No direct downstream dependencies mapped.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h4 style="font-size:0.82rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Services that rely on this service (Upstream):</h4>
+    <div class="bcm-table-container">
+      <table class="bcm-table">
+        <thead>
+          <tr>
+            <th>Source Service</th>
+            <th>Criticality Tier</th>
+            <th>Impact Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for up in upstream %}
+          <tr>
+            <td>
+              <strong><a href="{% url 'service_detail' up.source_service.id %}" style="color:var(--text-main); text-decoration:none;">{{ up.source_service.name }}</a></strong>
+            </td>
+            <td><span class="badge {% if up.source_service.tier == 'Tier 1' %}badge-tier1{% else %}badge-tier2{% endif %}">{{ up.source_service.tier }}</span></td>
+            <td><span class="badge badge-tier1">{{ up.criticality }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">No upstream dependencies configured.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Associated BIA and BCP -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        BIA & Continuity Runbooks
+      </div>
+    </div>
+
+    <!-- BIA Card -->
+    <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:700; color:#fff;">Business Impact Analysis</span>
+        {% if bias.first %}
+        <span class="badge {% if bias.first.status == 'Attested' %}badge-success{% else %}badge-warning{% endif %}">{{ bias.first.status }}</span>
+        {% endif %}
+      </div>
+      {% if bias.first %}
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">
+        Assessment Ref: <strong>{{ bias.first.bia_reference }}</strong> ({{ bias.first.version }})
+      </div>
+      <div style="font-size:0.82rem; color:var(--text-subtle); margin-bottom:12px;">
+        Assessor: {{ bias.first.assessor }} | Score: <strong style="color:var(--danger)">{{ bias.first.overall_criticality }}</strong>
+      </div>
+      <a href="{% url 'bia_detail' bias.first.id %}" class="btn btn-secondary btn-sm">View Full BIA Breakdown</a>
+      {% else %}
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">No BIA submitted yet.</div>
+      <a href="{% url 'bia_list' %}" class="btn btn-primary btn-sm">Initiate BIA</a>
+      {% endif %}
+    </div>
+
+    <!-- BCP Card -->
+    <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:700; color:#fff;">Business Continuity Plan</span>
+        {% if bcps.first %}
+        <span class="badge badge-success">{{ bcps.first.status }}</span>
+        {% endif %}
+      </div>
+      {% if bcps.first %}
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">
+        Plan Code: <strong>{{ bcps.first.plan_code }}</strong> ({{ bcps.first.version }})
+      </div>
+      <div style="font-size:0.82rem; color:var(--text-subtle); margin-bottom:12px;">
+        DR Target: {{ bcps.first.dr_site }}
+      </div>
+      <a href="{% url 'bcp_detail' bcps.first.id %}" class="btn btn-secondary btn-sm">Open BCP Runbook & Call Tree</a>
+      {% else %}
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">No BCP published for this service.</div>
+      <a href="{% url 'bcp_list' %}" class="btn btn-primary btn-sm">Draft Continuity Plan</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

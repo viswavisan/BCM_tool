@@ -1,0 +1,167 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Critical Services Registry | ResilienceOps BCM{% endblock %}
+{% block page_title %}Critical Business Services Registry{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Enterprise Service Catalog
+      </div>
+      <div class="panel-subtitle">Mission-critical services inventory mapped under DORA & ISO 22301 standards</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('newServiceModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Onboard New Service
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div style="display:flex; gap:8px;">
+      <a href="{% url 'services_list' %}" class="btn {% if not tier_filter %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">All Tiers</a>
+      <a href="{% url 'services_list' %}?tier=Tier 1" class="btn {% if tier_filter == 'Tier 1' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Tier 1 (Mission Critical)</a>
+      <a href="{% url 'services_list' %}?tier=Tier 2" class="btn {% if tier_filter == 'Tier 2' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Tier 2</a>
+      <a href="{% url 'services_list' %}?tier=Tier 3" class="btn {% if tier_filter == 'Tier 3' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Tier 3</a>
+    </div>
+
+    <form method="GET" style="display:flex; gap:8px;">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by code, service or dept..." class="form-control" style="width:260px; padding:6px 12px; font-size:0.84rem;">
+      <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+    </form>
+  </div>
+
+  <!-- Services Table -->
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Service Code</th>
+          <th>Service Name</th>
+          <th>Criticality Tier</th>
+          <th>Department & Owner</th>
+          <th>RTO Target</th>
+          <th>RPO Target</th>
+          <th>MTPD</th>
+          <th>Hourly Exposure</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for svc in services %}
+        <tr>
+          <td><strong>{{ svc.code }}</strong></td>
+          <td>
+            <div style="font-weight:600;">{{ svc.name }}</div>
+            <div style="font-size:0.75rem; color:var(--text-subtle);">{{ svc.description|truncatechars:50 }}</div>
+          </td>
+          <td>
+            <span class="badge {% if svc.tier == 'Tier 1' %}badge-tier1{% elif svc.tier == 'Tier 2' %}badge-tier2{% else %}badge-tier3{% endif %}">
+              {{ svc.tier }}
+            </span>
+          </td>
+          <td>
+            <div>{{ svc.department }}</div>
+            <div style="font-size:0.75rem; color:var(--text-subtle);">{{ svc.owner_name }}</div>
+          </td>
+          <td><strong style="color:var(--accent-cyan);">{{ svc.rto_hours }} hrs</strong></td>
+          <td>{{ svc.rpo_hours }} hrs</td>
+          <td>{{ svc.mtpd_hours }} hrs</td>
+          <td><span style="color:var(--danger); font-weight:600;">${{ svc.financial_loss_per_hour|floatformat:0 }}</span>/hr</td>
+          <td>
+            <span class="badge badge-success">{{ svc.status }}</span>
+          </td>
+          <td>
+            <a href="{% url 'service_detail' svc.id %}" class="btn btn-secondary btn-sm">Profile & Lineage</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align:center; color:var(--text-muted); padding:30px;">No services matching filters found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Onboard Service Modal -->
+<div class="modal-overlay" id="newServiceModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Onboard Critical Business Service</div>
+      <button onclick="closeModal('newServiceModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Service Code *</label>
+            <input type="text" name="code" class="form-control" placeholder="e.g. SVC-LOAN-09" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Service Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Commercial Lending Gateway" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Criticality Tier *</label>
+            <select name="tier" class="form-control">
+              <option value="Tier 1">Tier 1 - Mission Critical</option>
+              <option value="Tier 2">Tier 2 - Business Critical</option>
+              <option value="Tier 3">Tier 3 - Important</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department *</label>
+            <input type="text" name="department" class="form-control" placeholder="e.g. Lending & Credit" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Business Owner *</label>
+          <input type="text" name="owner_name" class="form-control" placeholder="e.g. Robert Hansen" required>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label class="form-label">RTO (Hours) *</label>
+            <input type="number" step="0.5" name="rto_hours" class="form-control" value="2.0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">RPO (Hours) *</label>
+            <input type="number" step="0.1" name="rpo_hours" class="form-control" value="0.5" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">MTPD (Hours) *</label>
+            <input type="number" step="0.5" name="mtpd_hours" class="form-control" value="4.0" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Est. Financial Disruption Loss ($/Hour) *</label>
+          <input type="number" step="1000" name="financial_loss_per_hour" class="form-control" value="75000" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Service Description</label>
+          <textarea name="description" class="form-control" placeholder="Brief technical & business purpose..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('newServiceModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save & Register Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

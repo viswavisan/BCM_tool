@@ -1,0 +1,148 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Live Drill: {{ test.test_code }} | RTEP Platform{% endblock %}
+{% block page_title %}RTEP Live Exercise Runner: {{ test.test_code }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{% url 'rtep_tests' %}" class="btn btn-secondary btn-sm">&larr; Back to Exercises List</a>
+</div>
+
+<div class="panel" style="border-left:4px solid var(--primary);">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+        <h2 style="font-family:var(--font-heading); color:#fff; font-size:1.45rem;">{{ test.title }}</h2>
+        <span class="badge badge-neutral">{{ test.exercise_type }}</span>
+        <span class="badge {% if test.status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">{{ test.status }}</span>
+      </div>
+      <div style="font-size:0.88rem; color:var(--text-muted);">
+        Target Service: <strong>{{ test.target_service.name }}</strong> (RTO Threshold: <strong style="color:var(--accent-cyan);">{{ test.target_rto_minutes }} minutes</strong>) &bull; Lead: <strong>{{ test.lead_facilitator }}</strong>
+      </div>
+    </div>
+
+    <!-- Active Timer Display -->
+    <div style="text-align:right;">
+      <div class="stopwatch-display" id="drillTimer">00:00:00</div>
+      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" onclick="startTimer()" class="btn btn-primary btn-sm" id="btnStartTimer">&#9658; Start Clock</button>
+        <button type="button" onclick="pauseTimer()" class="btn btn-secondary btn-sm" id="btnPauseTimer">&#10074;&#10074; Pause</button>
+        <button type="button" onclick="resetTimer()" class="btn btn-secondary btn-sm">&#8634; Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="POST">
+  {% csrf_token %}
+  <div class="charts-dual-grid">
+    <!-- Inject Sequence & Execution Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+          Scenario Injects: {{ test.scenario.title }}
+        </div>
+      </div>
+
+      <div style="background:var(--bg-main); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; margin-bottom:20px;">
+        <h4 style="font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Scenario Injects Sequence</h4>
+        <pre style="font-family:'Courier New', monospace; font-size:0.84rem; color:var(--accent-cyan); white-space:pre-wrap;">{{ test.scenario.inject_timeline }}</pre>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Live Crisis Execution Log & Timeline Notes *</label>
+        <textarea name="execution_log" id="executionLogInput" class="form-control" style="min-height:160px; font-family:monospace; font-size:0.86rem;" placeholder="[T+00:00] Declared DR incident with Gold Crisis Team...&#10;[T+00:15] Primary AWS partition confirmed, initiating standby promotion..." required>{{ test.execution_log }}</textarea>
+      </div>
+      <button type="button" onclick="appendTimestamp()" class="btn btn-secondary btn-sm">+ Insert Current Timestamp</button>
+    </div>
+
+    <!-- Observations & Outcome Form -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Drill Results & RTO Attestation
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Actual Recovery Time (Elapsed Minutes) *</label>
+        <input type="number" name="actual_recovery_time_minutes" id="actualMinutesInput" class="form-control" value="{{ test.actual_recovery_time_minutes|default:'42' }}" required>
+        <span style="font-size:0.75rem; color:var(--text-subtle);">Target RTO: {{ test.target_rto_minutes }} minutes</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Test Exercise Outcome *</label>
+        <select name="outcome" class="form-control">
+          <option value="Successful" {% if test.outcome == 'Successful' %}selected{% endif %}>Successful (RTO & RPO Targets Fully Met)</option>
+          <option value="Partial Pass" {% if test.outcome == 'Partial Pass' %}selected{% endif %}>Partial Pass (Minor Latency / Non-blocking Breaches)</option>
+          <option value="Failed" {% if test.outcome == 'Failed' %}selected{% endif %}>Failed (RTO Exceeded / System Failed to Recover)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Key Observations & Identified Gaps</label>
+        <textarea name="key_observations" class="form-control" style="min-height:110px;" placeholder="Document any bottlenecks, cache lag, or synchronization discrepancies observed during failover...">{{ test.key_observations }}</textarea>
+      </div>
+
+      <div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--border-subtle);">
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">
+          Complete & Attest Test Exercise Results
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let timerInterval = null;
+  let secondsElapsed = 0;
+
+  function updateDisplay() {
+    const hrs = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+    const secs = String(secondsElapsed % 60).padStart(2, '0');
+    document.getElementById('drillTimer').innerText = `${hrs}:${mins}:${secs}`;
+    
+    // Automatically update elapsed minutes input
+    const elapsedMinutes = Math.max(1, Math.round(secondsElapsed / 60));
+    document.getElementById('actualMinutesInput').value = elapsedMinutes;
+  }
+
+  function startTimer() {
+    if (!timerInterval) {
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        updateDisplay();
+      }, 1000);
+      document.getElementById('btnStartTimer').classList.add('btn-secondary');
+    }
+  }
+
+  function pauseTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      document.getElementById('btnStartTimer').classList.remove('btn-secondary');
+    }
+  }
+
+  function resetTimer() {
+    pauseTimer();
+    secondsElapsed = 0;
+    updateDisplay();
+  }
+
+  function appendTimestamp() {
+    const hrs = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+    const secs = String(secondsElapsed % 60).padStart(2, '0');
+    const textarea = document.getElementById('executionLogInput');
+    textarea.value += `\n[T+${mins}:${secs}] `;
+    textarea.focus();
+  }
+</script>
+{% endblock %}

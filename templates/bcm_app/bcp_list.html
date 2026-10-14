@@ -1,0 +1,135 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Business Continuity Plans (BCP) | ResilienceOps{% endblock %}
+{% block page_title %}Business Continuity Plans & Disaster Runbooks{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+        Enterprise BCP Repository
+      </div>
+      <div class="panel-subtitle">Standard Operating Procedures, crisis activation thresholds, and failover runbooks</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('newBcpModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Author New BCP
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Plan Code</th>
+          <th>Plan Title</th>
+          <th>Target Service</th>
+          <th>Version</th>
+          <th>Primary Hosting</th>
+          <th>DR Site</th>
+          <th>Status</th>
+          <th>Last Approved</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+        <tr>
+          <td><strong>{{ plan.plan_code }}</strong></td>
+          <td style="font-weight:600; color:#fff;">{{ plan.title }}</td>
+          <td>
+            <a href="{% url 'service_detail' plan.service.id %}" style="color:var(--accent-cyan); text-decoration:none;">
+              {{ plan.service.code }}: {{ plan.service.name }}
+            </a>
+          </td>
+          <td>{{ plan.version }}</td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ plan.primary_site }}</td>
+          <td style="font-size:0.8rem; color:var(--text-main);"><strong>{{ plan.dr_site }}</strong></td>
+          <td>
+            <span class="badge {% if plan.status == 'Approved' %}badge-success{% else %}badge-warning{% endif %}">
+              {{ plan.status }}
+            </span>
+          </td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ plan.approved_date|default:"In Review" }}</td>
+          <td>
+            <a href="{% url 'bcp_detail' plan.id %}" class="btn btn-secondary btn-sm">Runbook & Call Tree</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center; color:var(--text-muted); padding:30px;">No BCP documents registered.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal to draft new BCP -->
+<div class="modal-overlay" id="newBcpModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Author Business Continuity Plan</div>
+      <button onclick="closeModal('newBcpModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Plan Code *</label>
+            <input type="text" name="plan_code" class="form-control" placeholder="e.g. BCP-CARD-2027" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Plan Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Card Authorization Failover Runbook" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target Service *</label>
+          <select name="service_id" class="form-control" required>
+            {% for s in services %}
+            <option value="{{ s.id }}">{{ s.code }} - {{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Primary Site</label>
+            <input type="text" name="primary_site" class="form-control" value="Primary Colocation (Tier IV Frankfurt)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">DR Target Site *</label>
+            <input type="text" name="dr_site" class="form-control" value="Secondary Hot Standby (Zurich ZH2)" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Activation Thresholds & Triggers *</label>
+          <textarea name="activation_threshold" class="form-control" placeholder="Specific incident metrics that trigger this plan..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Recovery Strategy & Architecture *</label>
+          <textarea name="recovery_strategy" class="form-control" placeholder="Overall architectural recovery approach..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Step-by-Step Chronological Failover Procedures *</label>
+          <textarea name="failover_steps" class="form-control" style="min-height:120px;" placeholder="1. Declare emergency with Incident Commander&#10;2. Verify database replication status&#10;3. Execute DNS switchover script..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('newBcpModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Publish Plan</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

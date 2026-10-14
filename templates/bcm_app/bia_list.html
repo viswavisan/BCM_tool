@@ -1,0 +1,147 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Business Impact Analysis (BIA) Hub | ResilienceOps BCM{% endblock %}
+{% block page_title %}Business Impact Analysis (BIA) Lifecycle Hub{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        BIA Assessments & Attestation Registry
+      </div>
+      <div class="panel-subtitle">Comprehensive impact ratings across financial, operational, regulatory, and reputational axes</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('newBiaModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Initiate New BIA
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>BIA Reference</th>
+          <th>Service</th>
+          <th>Version</th>
+          <th>Criticality Rating</th>
+          <th>Financial (1-5)</th>
+          <th>Operational (1-5)</th>
+          <th>Regulatory (1-5)</th>
+          <th>Reputational (1-5)</th>
+          <th>Status</th>
+          <th>Next Review</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bia in bias %}
+        <tr>
+          <td><strong>{{ bia.bia_reference }}</strong></td>
+          <td>
+            <div style="font-weight:600;">{{ bia.service.name }}</div>
+            <div style="font-size:0.75rem; color:var(--text-subtle);">{{ bia.service.code }} ({{ bia.service.tier }})</div>
+          </td>
+          <td>{{ bia.version }}</td>
+          <td>
+            <span class="badge {% if bia.overall_criticality == 'Catastrophic' %}badge-tier1{% elif bia.overall_criticality == 'Major' %}badge-tier2{% else %}badge-tier3{% endif %}">
+              {{ bia.overall_criticality }}
+            </span>
+          </td>
+          <td><strong style="color:var(--danger)">{{ bia.financial_impact_score }}/5</strong></td>
+          <td><strong style="color:var(--warning)">{{ bia.operational_impact_score }}/5</strong></td>
+          <td><strong style="color:var(--accent-purple)">{{ bia.regulatory_impact_score }}/5</strong></td>
+          <td><strong style="color:var(--accent-cyan)">{{ bia.reputational_impact_score }}/5</strong></td>
+          <td>
+            <span class="badge {% if bia.status == 'Attested' %}badge-success{% elif bia.status == 'Submitted' %}badge-warning{% else %}badge-neutral{% endif %}">
+              {{ bia.status }}
+            </span>
+          </td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">
+            {{ bia.next_review_date|default:"Pending" }}
+          </td>
+          <td>
+            <a href="{% url 'bia_detail' bia.id %}" class="btn btn-secondary btn-sm">Audit & Attest</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11" style="text-align:center; color:var(--text-muted); padding:30px;">No BIA records found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal to initiate new BIA -->
+<div class="modal-overlay" id="newBiaModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Initiate Business Impact Analysis Assessment</div>
+      <button onclick="closeModal('newBiaModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Target Critical Service *</label>
+          <select name="service_id" class="form-control" required>
+            {% for s in services %}
+            <option value="{{ s.id }}">{{ s.code }} - {{ s.name }} ({{ s.tier }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">BIA Reference Code</label>
+            <input type="text" name="bia_reference" class="form-control" placeholder="Auto-generated if blank">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assessor Name *</label>
+            <input type="text" name="assessor" class="form-control" value="Risk Assurance Lead" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Financial (1-5)</label>
+            <input type="number" min="1" max="5" name="financial_impact_score" class="form-control" value="4" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Operational (1-5)</label>
+            <input type="number" min="1" max="5" name="operational_impact_score" class="form-control" value="4" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Regulatory (1-5)</label>
+            <input type="number" min="1" max="5" name="regulatory_impact_score" class="form-control" value="4" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reputational (1-5)</label>
+            <input type="number" min="1" max="5" name="reputational_impact_score" class="form-control" value="4" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Peak Disruption Period</label>
+          <input type="text" name="peak_impact_timeframe" class="form-control" value="Month-End Closing & Core Trading Hours">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Statutory & Regulatory Exposure</label>
+          <textarea name="legal_regulatory_exposure" class="form-control" placeholder="Regulatory fines, central bank notifications, breach of SLAs..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('newBiaModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit for Attestation</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

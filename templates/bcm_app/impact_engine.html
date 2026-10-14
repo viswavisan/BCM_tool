@@ -1,0 +1,263 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Cascading Impact Engine & Simulation | ResilienceOps{% endblock %}
+{% block page_title %}Cascading Impact Simulation Engine{% endblock %}
+
+{% block content %}
+<div class="panel" style="background:linear-gradient(135deg, rgba(19, 27, 46, 0.9) 0%, rgba(24, 34, 58, 0.9) 100%);">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m13 2-2 2.5V8l5 4-5 4v3.5L13 22l8-10-8-10Z"/><path d="M3 12h8"/></svg>
+        What-If Disruption & Cascading Blast Radius Simulator
+      </div>
+      <div class="panel-subtitle">Simulate failure of any service, cloud zone, or third-party provider to predict operational & financial contagion</div>
+    </div>
+  </div>
+
+  <!-- Simulation Parameters Form -->
+  <form id="simulateForm" onsubmit="runSimulation(event)" style="display:grid; grid-template-columns:2fr 2fr 1fr auto; gap:16px; align-items:flex-end;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Simulation Target Type *</label>
+      <select id="targetTypeSelect" class="form-control" onchange="toggleTargetOptions()">
+        <option value="vendor">ICT Third-Party / Cloud Infrastructure</option>
+        <option value="service">Internal Critical Service</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Select Failure Node *</label>
+      <select id="vendorSelect" class="form-control">
+        {% for v in vendors %}
+        <option value="{{ v.id }}">{{ v.name }} ({{ v.service_provided }})</option>
+        {% endfor %}
+      </select>
+      <select id="serviceSelect" class="form-control" style="display:none;">
+        {% for s in services %}
+        <option value="{{ s.id }}">{{ s.code }}: {{ s.name }} ({{ s.tier }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Outage Duration *</label>
+      <select id="durationSelect" class="form-control">
+        <option value="1.0">1.0 Hour</option>
+        <option value="2.0" selected>2.0 Hours</option>
+        <option value="4.0">4.0 Hours</option>
+        <option value="8.0">8.0 Hours</option>
+        <option value="24.0">24.0 Hours</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="btnSimulate" style="height:44px; padding:0 24px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Run Simulation
+    </button>
+  </form>
+</div>
+
+<!-- Simulation Results Container -->
+<div id="simulationOutput" style="display:none;">
+  <!-- Financial & Blast Radius Overview -->
+  <div class="stats-grid">
+    <div class="stat-card card-danger">
+      <div class="stat-header">
+        <span class="stat-title">Projected Disruption Loss</span>
+        <div class="stat-icon" style="color:var(--danger)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+      </div>
+      <div class="stat-value" id="lossValue" style="color:var(--danger);">$0</div>
+      <div class="stat-subtitle" id="hourlyLossSubtitle">Cumulative based on duration</div>
+    </div>
+
+    <div class="stat-card card-danger">
+      <div class="stat-header">
+        <span class="stat-title">RTO Breach Hazard</span>
+        <div class="stat-icon" style="color:var(--danger)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+      </div>
+      <div class="stat-value" id="rtoBreachValue" style="color:var(--danger);">0 Services</div>
+      <div class="stat-subtitle">Exceeding regulatory disruption tolerance</div>
+    </div>
+
+    <div class="stat-card card-cyan">
+      <div class="stat-header">
+        <span class="stat-title">Direct Contagion</span>
+        <div class="stat-icon" style="color:var(--accent-cyan)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+      </div>
+      <div class="stat-value" id="directImpactValue" style="color:var(--accent-cyan);">0</div>
+      <div class="stat-subtitle">Immediately impacted services</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-title">Cascading Contagion</span>
+        <div class="stat-icon" style="color:var(--warning)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/></svg>
+        </div>
+      </div>
+      <div class="stat-value" id="cascadingImpactValue" style="color:var(--warning);">0</div>
+      <div class="stat-subtitle">Secondary upstream dependencies severed</div>
+    </div>
+  </div>
+
+  <!-- Detailed Impacted Services & Recommendations -->
+  <div class="charts-dual-grid">
+    <!-- Impact Breakdown Table -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Affected Services Roster
+        </div>
+      </div>
+
+      <div class="bcm-table-container">
+        <table class="bcm-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Tier</th>
+              <th>Target RTO</th>
+              <th>Hourly Loss</th>
+              <th>Impact Reason</th>
+            </tr>
+          </thead>
+          <tbody id="affectedServicesBody">
+            <!-- Injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contingency Recommendations -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+          Recommended Contingency Activation
+        </div>
+      </div>
+
+      <div id="contingencyCards" style="display:flex; flex-direction:column; gap:14px;">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function toggleTargetOptions() {
+    const type = document.getElementById('targetTypeSelect').value;
+    if (type === 'vendor') {
+      document.getElementById('vendorSelect').style.display = 'block';
+      document.getElementById('serviceSelect').style.display = 'none';
+    } else {
+      document.getElementById('vendorSelect').style.display = 'none';
+      document.getElementById('serviceSelect').style.display = 'block';
+    }
+  }
+
+  function runSimulation(e) {
+    e.preventDefault();
+    const type = document.getElementById('targetTypeSelect').value;
+    const targetId = type === 'vendor' ? document.getElementById('vendorSelect').value : document.getElementById('serviceSelect').value;
+    const duration = document.getElementById('durationSelect').value;
+    
+    const btn = document.getElementById('btnSimulate');
+    btn.innerHTML = 'Computing Cascades...';
+    btn.disabled = true;
+
+    fetch("{% url 'api_impact_simulate' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_type: type,
+        target_id: targetId,
+        duration_hours: duration
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Simulation';
+      btn.disabled = false;
+      renderSimulationResults(data);
+    })
+    .catch(err => {
+      alert('Error running simulation: ' + err);
+      btn.disabled = false;
+    });
+  }
+
+  function renderSimulationResults(data) {
+    document.getElementById('simulationOutput').style.display = 'block';
+    document.getElementById('lossValue').innerText = '$' + Number(data.total_projected_loss).toLocaleString();
+    document.getElementById('hourlyLossSubtitle').innerText = `$${Number(data.total_hourly_loss).toLocaleString()}/hr over ${data.duration_hours} hrs`;
+    document.getElementById('rtoBreachValue').innerText = `${data.rto_breaches_count} Breaches`;
+    document.getElementById('directImpactValue').innerText = data.direct_impact_count;
+    document.getElementById('cascadingImpactValue').innerText = data.cascading_impact_count;
+
+    // Render table
+    const tbody = document.getElementById('affectedServicesBody');
+    let rows = '';
+    const all = [...data.direct_services, ...data.cascading_services];
+    if (all.length === 0) {
+      rows = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No services affected by this failure.</td></tr>';
+    } else {
+      all.forEach(s => {
+        const isBreached = s.rto < data.duration_hours;
+        rows += `
+          <tr>
+            <td><strong>${s.code}</strong> - ${s.name}</td>
+            <td><span class="badge ${s.tier === 'Tier 1' ? 'badge-tier1' : 'badge-tier2'}">${s.tier}</span></td>
+            <td>
+              <span style="color:${isBreached ? 'var(--danger)' : 'var(--success)'}; font-weight:700;">
+                ${s.rto}h ${isBreached ? '&#9888; Breach!' : '&#10003; Safe'}
+              </span>
+            </td>
+            <td>$${Number(s.loss_per_hour).toLocaleString()}/hr</td>
+            <td style="font-size:0.8rem; color:var(--text-muted);">${s.reason}</td>
+          </tr>
+        `;
+      });
+    }
+    tbody.innerHTML = rows;
+
+    // Render contingency plans
+    const cCards = document.getElementById('contingencyCards');
+    let planHtml = '';
+    if (data.contingency_plans.length === 0) {
+      planHtml = '<div style="color:var(--text-muted);">No specific BCP runbooks directly mapped to affected nodes.</div>';
+    } else {
+      data.contingency_plans.forEach(p => {
+        planHtml += `
+          <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px; border-left:3px solid var(--accent-cyan);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <strong style="color:#fff;">${p.code}: ${p.title}</strong>
+              <span class="badge badge-success">Standby Ready</span>
+            </div>
+            <div style="font-size:0.82rem; color:var(--accent-cyan); margin-bottom:6px;">DR Facility: ${p.dr_site}</div>
+            <div style="font-size:0.84rem; color:var(--text-muted); line-height:1.5;">${p.strategy}</div>
+          </div>
+        `;
+      });
+    }
+    cCards.innerHTML = planHtml;
+
+    // Smooth scroll to output
+    document.getElementById('simulationOutput').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Pre-run on load for immediate preview
+  document.addEventListener('DOMContentLoaded', () => {
+    // Optionally trigger once
+  });
+</script>
+{% endblock %}

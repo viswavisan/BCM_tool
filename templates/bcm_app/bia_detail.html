@@ -1,0 +1,157 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}BIA Assessment: {{ bia.bia_reference }} | ResilienceOps{% endblock %}
+{% block page_title %}BIA Detail & Executive Attestation{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{% url 'bia_list' %}" class="btn btn-secondary btn-sm">&larr; Back to BIA Registry</a>
+</div>
+
+<div class="charts-dual-grid">
+  <!-- Assessment Summary Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          {{ bia.bia_reference }} ({{ bia.version }})
+        </div>
+        <div class="panel-subtitle">Target Service: <strong>{{ bia.service.name }}</strong> ({{ bia.service.code }})</div>
+      </div>
+      <span class="badge {% if bia.status == 'Attested' %}badge-success{% else %}badge-warning{% endif %}">
+        {{ bia.status }}
+      </span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+      <div>
+        <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Overall Criticality</div>
+        <div style="font-size:1.4rem; font-weight:700; color:var(--danger); font-family:var(--font-heading);">{{ bia.overall_criticality }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Assessor</div>
+        <div style="font-weight:600; color:#fff;">{{ bia.assessor }}</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Peak Disruption Period</label>
+      <div style="background:var(--bg-surface-alt); padding:10px 14px; border-radius:var(--radius-md); font-size:0.88rem; color:#fff;">
+        {{ bia.peak_impact_timeframe }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Scope & Target Architecture</label>
+      <div style="background:var(--bg-surface-alt); padding:10px 14px; border-radius:var(--radius-md); font-size:0.88rem; color:var(--text-muted);">
+        {{ bia.scope_details|default:"Covers all active customer channels, core payment orchestration, and database replication links." }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Statutory & Regulatory Exposure</label>
+      <div style="background:var(--bg-surface-alt); padding:10px 14px; border-radius:var(--radius-md); font-size:0.88rem; color:#f87171;">
+        {{ bia.legal_regulatory_exposure|default:"Breach of Article 11 DORA ICT incident reporting timeline if downtime exceeds 4 hours." }}
+      </div>
+    </div>
+
+    <!-- Attestation Action -->
+    <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+      {% if bia.status == 'Attested' %}
+      <div style="background:var(--success-bg); border:1px solid rgba(16,185,129,0.3); border-radius:var(--radius-md); padding:16px;">
+        <div style="font-weight:700; color:var(--success); margin-bottom:4px;">&#10003; Formally Attested & Approved</div>
+        <div style="font-size:0.82rem; color:var(--text-muted);">
+          Attested by <strong>{{ bia.attested_by }}</strong> on {{ bia.attestation_date }}. Next scheduled review: {{ bia.next_review_date }}.
+        </div>
+      </div>
+      {% else %}
+      <form method="POST" action="{% url 'bia_attest' bia.id %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label">Attesting Authority (Sign-Off)</label>
+          <input type="text" name="attested_by" class="form-control" value="Chief Risk Officer (CRO) Office" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">
+          Sign & Formally Attest BIA (ISO 22301)
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Radar Matrix Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          Multi-Dimensional Impact Radar
+        </div>
+        <div class="panel-subtitle">Weighted scoring matrix across 4 risk vectors</div>
+      </div>
+    </div>
+
+    <div class="chart-wrapper" style="height:340px;">
+      <canvas id="radarChart"></canvas>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px;">
+      <div style="background:var(--bg-surface-alt); padding:12px; border-radius:var(--radius-md); text-align:center;">
+        <span style="font-size:0.75rem; color:var(--text-subtle);">FINANCIAL</span>
+        <div style="font-size:1.2rem; font-weight:700; color:var(--danger);">{{ bia.financial_impact_score }} / 5</div>
+      </div>
+      <div style="background:var(--bg-surface-alt); padding:12px; border-radius:var(--radius-md); text-align:center;">
+        <span style="font-size:0.75rem; color:var(--text-subtle);">OPERATIONAL</span>
+        <div style="font-size:1.2rem; font-weight:700; color:var(--warning);">{{ bia.operational_impact_score }} / 5</div>
+      </div>
+      <div style="background:var(--bg-surface-alt); padding:12px; border-radius:var(--radius-md); text-align:center;">
+        <span style="font-size:0.75rem; color:var(--text-subtle);">REGULATORY</span>
+        <div style="font-size:1.2rem; font-weight:700; color:var(--accent-purple);">{{ bia.regulatory_impact_score }} / 5</div>
+      </div>
+      <div style="background:var(--bg-surface-alt); padding:12px; border-radius:var(--radius-md); text-align:center;">
+        <span style="font-size:0.75rem; color:var(--text-subtle);">REPUTATIONAL</span>
+        <div style="font-size:1.2rem; font-weight:700; color:var(--accent-cyan);">{{ bia.reputational_impact_score }} / 5</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const ctxRadar = document.getElementById('radarChart').getContext('2d');
+  new Chart(ctxRadar, {
+    type: 'radar',
+    data: {
+      labels: {{ radar_labels_json|safe }},
+      datasets: [{
+        label: 'Impact Score (1-5)',
+        data: {{ radar_data_json|safe }},
+        backgroundColor: 'rgba(99, 102, 241, 0.25)',
+        borderColor: '#6366f1',
+        pointBackgroundColor: '#06b6d4',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: '#6366f1',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          angleLines: { color: 'rgba(255, 255, 255, 0.08)' },
+          grid: { color: 'rgba(255, 255, 255, 0.08)' },
+          pointLabels: { color: '#94a3b8', font: { family: 'Inter', size: 12, weight: 600 } },
+          ticks: { backdropColor: 'transparent', color: '#64748b', stepSize: 1, min: 0, max: 5 }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+</script>
+{% endblock %}

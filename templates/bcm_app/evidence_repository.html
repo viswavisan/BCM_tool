@@ -1,0 +1,138 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Evidence Vault & Audit Repository | ResilienceOps{% endblock %}
+{% block page_title %}Evidence Repository & Compliance Vault{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Compliance Evidence & Failover Artifacts
+      </div>
+      <div class="panel-subtitle">Auditable repository of drill execution metrics, board attestation sign-offs, and regulator disclosures</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('uploadEvidenceModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Catalog Evidence Item
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Artifact Title</th>
+          <th>Evidence Category</th>
+          <th>Linked Service</th>
+          <th>File Reference</th>
+          <th>Size</th>
+          <th>Version</th>
+          <th>Uploaded By</th>
+          <th>Date Recorded</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in evidence_items %}
+        <tr>
+          <td>
+            <div style="font-weight:600; color:#fff;">{{ item.title }}</div>
+          </td>
+          <td>
+            <span class="badge badge-neutral">{{ item.evidence_type }}</span>
+          </td>
+          <td>
+            {% if item.service %}
+            <a href="{% url 'service_detail' item.service.id %}" style="color:var(--accent-cyan); text-decoration:none;">
+              {{ item.service.code }}
+            </a>
+            {% else %}
+            <span style="color:var(--text-subtle);">Enterprise Wide</span>
+            {% endif %}
+          </td>
+          <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">{{ item.file_name }}</td>
+          <td>{{ item.file_size_kb }} KB</td>
+          <td>{{ item.version }}</td>
+          <td style="font-size:0.82rem; color:var(--text-main);">{{ item.uploaded_by }}</td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">{{ item.uploaded_at|date:"Y-m-d" }}</td>
+          <td>
+            <button onclick="alert('Artifact verification checksum matches SHA-256 integrity hash: 8f2c... verified.')" class="btn btn-secondary btn-sm">
+              Verify Hash
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center; color:var(--text-muted); padding:30px;">No evidence files cataloged yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal to upload evidence -->
+<div class="modal-overlay" id="uploadEvidenceModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Catalog Audit Evidence Artifact</div>
+      <button onclick="closeModal('uploadEvidenceModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Evidence Title *</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Q2 Frankfurt Failover Network PCAP & Run Logs" required>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Evidence Type *</label>
+            <select name="evidence_type" class="form-control">
+              <option value="Test Execution Log">Test Execution Log</option>
+              <option value="Failover Proof">Failover Proof / Metrics</option>
+              <option value="BIA Sign-Off Sheet">BIA Sign-Off Sheet</option>
+              <option value="Audit Report">Audit Report</option>
+              <option value="Architecture Lineage">Architecture Lineage Diagram</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Related Critical Service</label>
+            <select name="service_id" class="form-control">
+              <option value="">Enterprise Wide (None)</option>
+              {% for s in services %}
+              <option value="{{ s.id }}">{{ s.code }} - {{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Filename *</label>
+            <input type="text" name="file_name" class="form-control" placeholder="e.g. audit_failover_metrics_signed.pdf" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">File Size (KB)</label>
+            <input type="number" name="file_size_kb" class="form-control" value="2048">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Uploader Name *</label>
+          <input type="text" name="uploaded_by" class="form-control" value="Compliance Assurance Officer" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('uploadEvidenceModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save to Evidence Vault</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

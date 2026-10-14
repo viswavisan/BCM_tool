@@ -1,0 +1,760 @@
+BCM tool – backend details
+Assumptions
+#
+Assumption
+1
+Python / PostgreSQL
+2
+~50-70 backend tables
+3
+SSO/RBAC
+4
+Workflow engine
+5
+Audit framework
+6
+Evidence management
+7
+Migration from legacy BCM + SPRL
+8
+AI integration
+9
+15-month delivery plan
+Milestone Feature Plan
+Milestone
+Period
+Features
+Milestone 1 – Pilot
+Feb-Apr 2027
+Authentication / SSO; User & Role Management; BIA Module; BC Plan Module; Initial Critical Services Registry; Workflow Engine (basic); Audit Logging; Pilot Migration Framework; Notifications
+Milestone 2 – Critical Services Registry
+May-Jun 2027
+Operational Dependency Dataset; Critical Services APIs; Ownership & Lineage; Access Controls; Reconciliation APIs; Dependency Registry
+Milestone 3 – RTEP & Scenario Library
+Jul-Sep 2027
+Test Repository; Exercise Management; Scenario Library; Evidence Repository; Findings & Remediation; Approval Workflows; Audit Controls
+Milestone 4 – Impact Engine
+Oct-Dec 2027
+Data Quality Rules; Reconciliation Engine; Dependency Graph; Impact Analysis Engine; Simulation APIs; Performance Optimization
+Milestone 5 – Reporting & ResQ
+Jan-Feb 2028
+Reporting APIs; Dashboard APIs; Metrics Catalog; Report Subscriptions; Conversational AI (ResQ); Query History; Access Controls
+Milestone 6 – Full Rollout
+Mar-Apr 2028
+Full Migration; Final Reconciliation; Bulk Rollout; Hypercare Support; Legacy Decommission; Archival & Retention; Operational Readiness
+API Assumptions
+#
+API Operation
+#
+API Operation
+1
+GET /dashboards/executive
+62
+POST /impact/simulate
+2
+GET /dashboards/operational
+63
+GET /impact/{id}
+3
+GET /dashboards/compliance
+64
+GET /impact/{id}/export
+4
+GET /dashboards/risk
+65
+GET /reports
+5
+GET /tasks/my-worklist
+66
+POST /reports/custom
+6
+GET /notifications
+67
+POST /reports/{id}/schedule
+7
+PATCH /notifications/{id}/read
+68
+GET /metrics-catalog
+8
+GET /services
+69
+GET /reports/{id}
+9
+POST /services
+70
+GET /reports/history
+10
+GET /services/{id}
+71
+POST /reports/export
+11
+PUT /services/{id}
+72
+POST /regulatory-notifications
+12
+POST /services/onboarding
+73
+POST /ai/chat
+13
+GET /services/reconciliation-exceptions
+74
+GET /ai/history
+14
+POST /services/reconciliation-exceptions/{id}/resolve
+75
+POST /ai/feedback
+15
+DELETE /services/{id}
+76
+GET /ai/saved-queries
+16
+GET /bia
+77
+GET /migration/batches
+17
+POST /bia
+78
+GET /migration/errors
+18
+GET /bia/{id}
+79
+POST /migration/errors/{id}/retry
+19
+PUT /bia/{id}
+80
+GET /migration/reconciliation
+20
+PUT /bia/{id}/scope
+81
+POST /migration/exceptions/{id}/resolve
+21
+POST /bia/{id}/attest
+82
+GET /migration/mapping-validation
+22
+GET /bia/{id}/versions
+83
+POST /auth/sso/callback
+23
+GET /bia/{id}/versions/compare
+84
+GET /users/me
+24
+POST /bia/{id}/evidence
+85
+PUT /users/me
+25
+GET /dependencies
+86
+POST /access-requests
+26
+POST /dependencies
+87
+GET /approvals/queue
+27
+GET /dependencies/{id}
+88
+POST /approvals/{id}/approve
+28
+PUT /dependencies/{id}
+89
+POST /approvals/{id}/reject
+29
+GET /dependencies/graph
+90
+POST /approvals/delegate
+30
+GET /dependencies/lineage/{id}
+91
+GET /attestations/queue
+31
+GET /ict-third-party-register
+92
+POST /attestations/{id}
+32
+POST /ict-third-party-register
+93
+GET /workflows/config
+33
+GET /bcp
+94
+PUT /workflows/config
+34
+POST /bcp
+95
+GET /workflows/{id}/history
+35
+GET /bcp/{id}
+96
+GET /workflows/audit
+36
+PUT /bcp/{id}
+97
+GET /findings
+37
+POST /bcp/{id}/approve
+98
+POST /findings
+38
+GET /bcp/{id}/versions/compare
+99
+GET /findings/{id}
+39
+GET /bcp/templates
+100
+PUT /findings/{id}
+40
+POST /bcp/templates
+101
+POST /findings/{id}/remediation-plan
+41
+GET /bcp/{id}/emergency-contacts
+102
+POST /findings/{id}/retest
+42
+PUT /bcp/{id}/emergency-contacts
+103
+GET /findings/tracking-dashboard
+43
+GET /bcp/{id}/regulatory-audit-log
+104
+GET /evidence/search
+44
+POST /bcp/{id}/regulatory-audit-log
+105
+POST /evidence
+45
+GET /scenarios
+106
+GET /evidence/{id}
+46
+POST /scenarios
+107
+GET /evidence/{id}/versions
+47
+GET /scenarios/{id}
+108
+GET /evidence/archive
+48
+PUT /scenarios/{id}
+109
+GET /admin/users
+49
+POST /scenarios/{id}/approve
+110
+PUT /admin/users
+50
+GET /tests
+111
+GET /admin/roles
+51
+POST /tests
+112
+PUT /admin/org-structure
+52
+GET /tests/{id}
+113
+GET /admin/org-structure
+53
+PUT /tests/{id}
+114
+GET /admin/audit-log
+54
+POST /tests/{id}/execute
+115
+GET /admin/system-config
+55
+POST /tests/{id}/results
+116
+PUT /admin/system-config
+56
+POST /tests/{id}/evidence
+117
+GET /admin/governance
+57
+GET /tests/{id}/issues
+118
+PUT /admin/governance
+58
+POST /tests/{id}/issues
+119
+GET /admin/permissions
+59
+GET /tests/{id}/audit-history
+120
+PUT /admin/permissions
+60
+GET /impact/search
+121
+GET /admin/notification-templates
+61
+GET /impact/dashboard
+122
+PUT /admin/notification-templates
+Resource Loading
+Role / Resource
+M1 - Pilot
+M2 - Registry
+M3 - RTEP & Scenario
+M4 - DQ & Impact Engine
+M5 - Reporting & ResQ
+M6 - Full Rollout
+Total FTE
+Avg FTE
+Resource Role
+27-Feb
+27-Apr
+27-May
+27-Jun
+27-Jul
+27-Sep
+27-Oct
+27-Dec
+28-Jan
+28-Feb
+28-Mar
+28-Apr
+Total FTE
+Avg FTE
+DevOps Engineer
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+12
+1
+FastAPI/ Backend Lead
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+12
+1
+Python Developer
+1
+1
+2
+2
+3
+3
+3
+3
+3
+3
+2
+2
+28
+2.3
+AI Engineer
+0
+0
+0
+0
+0
+0
+1
+1
+2
+2
+1
+1
+7
+0.6
+Backend QA Engineer
+1
+1
+1
+1
+1
+1
+2
+2
+2
+2
+1
+1
+16
+1.3
+DBA / Data Architect
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+6
+0.5
+Data Migration Engineers
+0
+0
+1
+1
+1
+1
+1
+1
+1
+1
+0.5
+0.5
+9
+0.8
+TOTAL BACKEND FTE
+4.5
+4.5
+6.5
+6.5
+7.5
+7.5
+9.5
+9.5
+10.5
+10.5
+7
+7
+90
+7.5
+TOTAL FRONTEND FTE
+8.5
+8.5
+8.5
+8.5
+7.5
+7.5
+6
+6
+6.5
+6.5
+7
+7
+87
+7.3
+TOTAL HEADCOUNT
+13
+13
+15
+15
+15
+15
+15.5
+15.5
+17
+17
+14
+14
+177
+14.8
+Experience & Skill Set
+Resource Role
+Experience
+Skill Set
+DevOps Engineer
+6+
+CI/CD pipelines, shell scripting, core networking, web & reverse proxy administration, PostgreSQL admin, containerization & orchestration, OCI cloud platform & architecture (IaWS/OCI/GCP/AWS), Observability, Logging
+FastAPI/ Backend Lead
+8+
+Python 3+, FastAPI/AsyncIO, microservices architecture, system design, data modeling, API security, Auth & compliance, testing strategy, quality gate implementation
+Python Developer
+4+
+Python, FastAPI, API development, asynchronous programming, Celery/task queues, unit testing, schema migrations, API authentication & authorization, API aggregation, Log analysis, API debugging
+AI Engineer
+4+
+Python, LangChain, RAG architecture, vector databases, LLM integration, prompt engineering, fine-tuning, evaluators, AI performance optimization
+Backend QA Engineer
+4+
+API automation testing, load & stress testing, performance metrics evaluation, test data generation, postman/Newman, authorization & authentication, CI/CD integration, API regression, log analysis, exploratory testing
+DBA / Data Architect
+10+
+High-availability PostgreSQL / CockroachDB, clustering & disaster recovery, query execution plan analysis, buffer cache tuning, connection pooling, performance benchmarking, automated partitioning, access control, hardware encryption, backup strategy, long-term retention
+Data Migration Engineers
+5+
+Data pipelines & ETL orchestration, schema migrations, code & service connections, CDC, CR-Log & Drift management, bulk ingestion & streaming, data reconciliation, validation & audit trails, automated data validation & reconciliation, cloud storage (OCI Object Storage)
+BCM Tool – Frontend Details
+Assumptions
+#
+Assumption
+1
+React + TypeScript
+2
+~90-100 Screens
+3
+SSO Integration
+4
+RBAC-based UI Visibility
+5
+Dynamic Workflow Screens
+6
+Dashboard & Reporting UI
+7
+File / Evidence Upload Components
+8
+ResQ AI Chat Interface
+9
+Responsive Enterprise UI
+10
+15-Month Delivery Plan
+Milestone Feature Plan
+Milestone
+Period
+Features
+Milestone 1 – Pilot
+Feb-Apr 2027
+Login, Landing Page, User Profile, Role Management Screens, BIA Screens, BC Plan Screens, Workflow Inbox, Notifications
+Milestone 2 – Critical Services Registry
+May-Jun 2027
+Critical Services UI, Ownership Screens, Registry Management, Dependency View, Search & Filters
+Milestone 3 – RTEP & Scenario Library
+Jul-Sep 2027
+Test Repository Screens, Scenario Designer, Exercise Tracking, Findings Management, Evidence Repository UI
+Milestone 4 – Impact Engine
+Oct-Dec 2027
+Dependency Graph Visualization, Impact Analysis Screens, Simulation UI, Data Quality Dashboard
+Milestone 5 – Reporting & ResQ
+Jan-Feb 2028
+Executive Dashboard, Reports Center, Metrics Catalog, Subscription Screens, ResQ AI Chat
+Milestone 6 – Full Rollout
+Mar-Apr 2028
+Final Reconciliation UI, Bulk Operations, Hypercare Dashboard, Archival Screens, Operational Readiness
+Screen Assumptions
+Module
+Approx Screens
+Authentication & User Profile
+5
+Dashboard
+8
+Notifications & Worklist
+6
+Critical Services
+8
+BIA
+10
+Dependencies & Lineage
+8
+BC Plans
+12
+Scenario Library
+6
+RTEP Testing
+10
+Impact Analysis
+8
+Reporting
+6
+ResQ AI Assistant
+4
+Migration & Reconciliation
+5
+Workflow & Attestation
+6
+Findings & Remediation
+8
+Evidence Repository
+5
+Administration
+10
+Total
+108
+Resource Loading
+Role / Resource
+M1 - Pilot
+M2 - Registry
+M3 - RTEP & Scenario
+M4 - DQ & Impact Engine
+M5 - Reporting & ResQ
+M6 - Full Rollout
+Total FTE
+Avg FTE
+Resource Role
+27-Feb
+27-Apr
+27-May
+27-Jun
+27-Jul
+27-Sep
+27-Oct
+27-Dec
+28-Jan
+28-Feb
+28-Mar
+28-Apr
+Total FTE
+Avg FTE
+Frontend Architect / Lead
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+12
+1
+Senior React Developer
+2
+2
+2
+2
+2
+2
+1
+1
+1
+1
+2
+2
+20
+1.7
+React Developer
+3
+3
+3
+3
+2
+2
+2
+2
+2
+2
+2
+2
+28
+2.3
+UI/UX Designer
+1
+1
+1
+1
+1
+1
+0.5
+0.5
+0.5
+0.5
+0
+0
+8
+0.7
+Frontend QA Engineer
+1
+1
+1
+1
+1
+1
+1
+1
+1.5
+1.5
+1.5
+1.5
+14
+1.2
+Accessibility Specialist
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+0.5
+5
+0.4
+TOTAL FRONTEND FTE
+8.5
+8.5
+8.5
+8.5
+7.5
+7.5
+6
+6
+6.5
+6.5
+7
+7
+87
+7.3
+TOTAL BACKEND FTE
+4.5
+4.5
+6.5
+6.5
+7.5
+7.5
+9.5
+9.5
+10.5
+10.5
+7
+7
+90
+7.5
+TOTAL HEADCOUNT
+13
+13
+15
+15
+15
+15
+15.5
+15.5
+17
+17
+14
+14
+177
+14.8
+Resource Skills
+Resource Role
+Experience
+Skill Set
+Frontend Architect / Lead
+10+
+React, TypeScript, Architecture, State Management, Micro Frontend, Security, Build Optimization
+Senior React Developer
+6+
+React, Redux Toolkit, React Query, TypeScript, Material UI, API Integration
+React Developer
+4+
+React, JavaScript, TypeScript, HTML5, CSS3, Routing, Forms, Validation
+UI/UX Designer
+6+
+Figma, Design Systems, Wireframing, Accessibility, User Journey Mapping
+Frontend QA Engineer
+4+
+Playwright, Cypress, Selenium, API Testing, Performance Testing, Accessibility Testing
+Accessibility Specialist
+4+
+WCAG 2.2, ARIA, Keyboard Navigation, Screen Readers, Compliance Validation

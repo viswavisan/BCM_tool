@@ -1,0 +1,125 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}ResQ Conversational AI Assistant | ResilienceOps{% endblock %}
+{% block page_title %}ResQ AI: Enterprise BCM & Resilience Copilot{% endblock %}
+
+{% block content %}
+<div class="resq-container">
+  <!-- Top Bar -->
+  <div style="padding:16px 24px; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(13, 18, 31, 0.7);">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="width:34px; height:34px; border-radius:var(--radius-md); background:linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%); display:flex; align-items:center; justify-content:center; color:#fff;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+      </div>
+      <div>
+        <h3 style="font-family:var(--font-heading); color:#fff; font-size:1.1rem; margin:0;">ResQ Resilience Intelligence</h3>
+        <span style="font-size:0.75rem; color:var(--accent-cyan);">Trained on ISO 22301, DORA & Your Enterprise BCM Repository</span>
+      </div>
+    </div>
+    <span class="badge badge-success">&#9679; Context Engine Online</span>
+  </div>
+
+  <!-- Chat Log Box -->
+  <div class="resq-chat-box" id="resqChatBox">
+    <!-- Welcome message -->
+    <div class="chat-bubble bubble-ai">
+      <strong>Hello! I am ResQ, your Enterprise Resilience & Continuity Assistant.</strong><br>
+      I can analyze your critical services registry, calculate blast radii across cloud and third-party dependencies, check BIA attestation statuses, and guide emergency failover runbooks.
+      <br><br>
+      <em>Select a suggested query below or type your own question.</em>
+    </div>
+
+    {% for chat in chat_history reversed %}
+    <div class="chat-bubble bubble-user">
+      {{ chat.user_query }}
+    </div>
+    <div class="chat-bubble bubble-ai">
+      {{ chat.ai_response|linebreaksbr }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Prompt Pills Bar -->
+  <div class="resq-prompt-pills">
+    <div class="prompt-pill" onclick="sendQuickPrompt('What services are affected if AWS Frankfurt experiences an outage?')">
+      What happens if AWS Frankfurt fails?
+    </div>
+    <div class="prompt-pill" onclick="sendQuickPrompt('Show all Tier 1 services with RTO under 2 hours')">
+      Tier 1 services with RTO &lt; 2h
+    </div>
+    <div class="prompt-pill" onclick="sendQuickPrompt('List open critical findings and CAPA remediation progress')">
+      Open critical CAPA findings
+    </div>
+    <div class="prompt-pill" onclick="sendQuickPrompt('Explain DORA compliance and third-party ICT register readiness')">
+      DORA compliance status
+    </div>
+  </div>
+
+  <!-- Input Bar -->
+  <form id="resqForm" onsubmit="handleChatSubmit(event)" class="resq-input-bar">
+    <input type="text" id="resqInput" class="form-control" placeholder="Ask ResQ anything about services, RTOs, failover procedures, or outage simulations..." autocomplete="off" required>
+    <button type="submit" class="btn btn-primary" id="btnSend">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Send
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function scrollToBottom() {
+    const box = document.getElementById('resqChatBox');
+    box.scrollTop = box.scrollHeight;
+  }
+  scrollToBottom();
+
+  function sendQuickPrompt(text) {
+    document.getElementById('resqInput').value = text;
+    handleChatSubmit(new Event('submit'));
+  }
+
+  function handleChatSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('resqInput');
+    const query = input.value.trim();
+    if (!query) return;
+
+    const chatBox = document.getElementById('resqChatBox');
+
+    // Append User Bubble
+    const userDiv = document.createElement('div');
+    userDiv.className = 'chat-bubble bubble-user';
+    userDiv.innerText = query;
+    chatBox.appendChild(userDiv);
+
+    // Append AI Thinking Bubble
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'chat-bubble bubble-ai';
+    aiDiv.innerHTML = '<em>ResQ is analyzing the operational dependency graph and BCM registry...</em>';
+    chatBox.appendChild(aiDiv);
+
+    input.value = '';
+    scrollToBottom();
+
+    fetch("{% url 'api_resq_chat' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query })
+    })
+    .then(res => res.json())
+    .then(data => {
+      // Format markdown-like bold and linebreaks
+      let replyHtml = data.reply
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      aiDiv.innerHTML = replyHtml;
+      scrollToBottom();
+    })
+    .catch(err => {
+      aiDiv.innerHTML = '<span style="color:var(--danger)">An error occurred querying the ResQ intelligence engine.</span>';
+      scrollToBottom();
+    });
+  }
+</script>
+{% endblock %}

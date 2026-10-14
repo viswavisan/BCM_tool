@@ -1,0 +1,174 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}{{ plan.plan_code }}: {{ plan.title }} | BCP Runbook{% endblock %}
+{% block page_title %}BCP Runbook: {{ plan.plan_code }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{% url 'bcp_list' %}" class="btn btn-secondary btn-sm">&larr; Back to BCP Repository</a>
+</div>
+
+<!-- Plan Header Card -->
+<div class="panel" style="border-left:4px solid var(--accent-cyan);">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.5rem; color:#fff;">{{ plan.title }}</h2>
+        <span class="badge badge-success">{{ plan.status }}</span>
+        <span class="badge badge-neutral">{{ plan.version }}</span>
+      </div>
+      <div style="font-size:0.9rem; color:var(--text-muted);">
+        Target Service: <strong>{{ plan.service.name }}</strong> ({{ plan.service.code }} - {{ plan.service.tier }})
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="window.print()" class="btn btn-secondary btn-sm">Export Runbook PDF</button>
+      <button onclick="openModal('addContactModal')" class="btn btn-primary btn-sm">+ Add Call Tree Contact</button>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Primary Hosting</div>
+      <div style="font-weight:600; color:#fff;">{{ plan.primary_site }}</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">DR Standby Site</div>
+      <div style="font-weight:600; color:var(--accent-cyan);">{{ plan.dr_site }}</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Sign-off Authority</div>
+      <div style="font-weight:600; color:#fff;">{{ plan.approved_by }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="charts-dual-grid">
+  <!-- Runbook Procedures -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+        Crisis Failover Execution Sequence
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <h4 style="font-size:0.8rem; text-transform:uppercase; color:var(--danger); margin-bottom:8px;">Activation Thresholds & Triggers</h4>
+      <div style="background:rgba(239, 68, 68, 0.08); border-left:3px solid var(--danger); padding:12px 16px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; font-size:0.88rem; color:#fff;">
+        {{ plan.activation_threshold }}
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <h4 style="font-size:0.8rem; text-transform:uppercase; color:var(--accent-cyan); margin-bottom:8px;">Recovery Architecture Strategy</h4>
+      <div style="background:var(--bg-surface-alt); padding:14px; border-radius:var(--radius-md); font-size:0.88rem; color:var(--text-main);">
+        {{ plan.recovery_strategy }}
+      </div>
+    </div>
+
+    <div>
+      <h4 style="font-size:0.8rem; text-transform:uppercase; color:var(--success); margin-bottom:8px;">Standard Operating Failover Steps</h4>
+      <div style="background:var(--bg-main); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; font-family:'Courier New', monospace; font-size:0.88rem; line-height:1.7; white-space:pre-wrap; color:#38bdf8;">{{ plan.failover_steps }}</div>
+    </div>
+  </div>
+
+  <!-- Emergency Contacts & Call Tree -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Crisis Response Call Tree
+        </div>
+        <div class="panel-subtitle">Tiered escalation order during active disaster declaration</div>
+      </div>
+    </div>
+
+    <div class="bcm-table-container">
+      <table class="bcm-table">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Role Title</th>
+            <th>Contact Name</th>
+            <th>Direct Phone</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in contacts %}
+          <tr>
+            <td>
+              <span class="badge {% if c.priority == 1 %}badge-danger{% else %}badge-neutral{% endif %}">
+                #{{ c.priority }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ c.role_title }}</strong>
+              {% if c.is_alternate %}<span class="badge badge-warning" style="font-size:0.65rem; margin-left:4px;">Alternate</span>{% endif %}
+            </td>
+            <td style="color:#fff;">{{ c.contact_name }}</td>
+            <td style="color:var(--accent-cyan); font-family:monospace;">{{ c.phone }}</td>
+            <td style="font-size:0.8rem; color:var(--text-muted);">{{ c.email }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No emergency contacts mapped yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal to add Contact -->
+<div class="modal-overlay" id="addContactModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Add Incident Call Tree Contact</div>
+      <button onclick="closeModal('addContactModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Role Title in Crisis *</label>
+          <input type="text" name="role_title" class="form-control" placeholder="e.g. Lead Network Engineer" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Name *</label>
+          <input type="text" name="contact_name" class="form-control" placeholder="e.g. Liam O'Connor" required>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="text" name="phone" class="form-control" placeholder="+44 20 7946 0123" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" name="email" class="form-control" placeholder="l.oconnor@enterprise-bcm.bank" required>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Call Priority Order (1=First)</label>
+            <input type="number" name="priority" class="form-control" value="1" min="1" required>
+          </div>
+          <div class="form-group" style="display:flex; align-items:center; margin-top:28px;">
+            <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" name="is_alternate" value="1">
+              <span style="font-size:0.85rem; color:var(--text-muted);">Designate as Alternate Contact</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('addContactModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Contact</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

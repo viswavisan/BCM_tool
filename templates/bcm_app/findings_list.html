@@ -1,0 +1,197 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Findings & CAPA Remediation | ResilienceOps{% endblock %}
+{% block page_title %}Findings & Corrective Action (CAPA) Register{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Audit Findings & Exercise Remediation
+      </div>
+      <div class="panel-subtitle">Tracking identified resilience gaps, root cause corrective actions, and retesting verification</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('newFindingModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log New Finding
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Finding Code</th>
+          <th>Title & Root Cause</th>
+          <th>Related Service</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Assigned Lead</th>
+          <th>Due Date</th>
+          <th>Update Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in findings %}
+        <tr>
+          <td><strong>{{ f.finding_code }}</strong></td>
+          <td>
+            <div style="font-weight:600; color:#fff;">{{ f.title }}</div>
+            <div style="font-size:0.78rem; color:var(--text-subtle); margin-top:2px;">
+              <strong>Root Cause:</strong> {{ f.root_cause|truncatechars:60 }}
+            </div>
+          </td>
+          <td>
+            <a href="{% url 'service_detail' f.service.id %}" style="color:var(--accent-cyan); text-decoration:none;">
+              {{ f.service.code }}
+            </a>
+          </td>
+          <td>
+            <span class="badge {% if f.severity == 'Critical' %}badge-tier1{% elif f.severity == 'High' %}badge-tier2{% else %}badge-neutral{% endif %}">
+              {{ f.severity }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if f.status == 'Closed & Verified' %}badge-success{% elif f.status == 'Ready for Retest' %}badge-tier2{% else %}badge-warning{% endif %}">
+              {{ f.status }}
+            </span>
+          </td>
+          <td style="font-size:0.85rem; color:var(--text-main);">{{ f.assigned_to }}</td>
+          <td style="font-size:0.82rem; color:var(--text-muted);">{{ f.due_date }}</td>
+          <td>
+            <button onclick="openUpdateModal('{{ f.id }}', '{{ f.finding_code }}', '{{ f.status }}')" class="btn btn-secondary btn-sm">
+              Update
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align:center; color:var(--text-muted); padding:30px;">No findings recorded.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal to log new finding -->
+<div class="modal-overlay" id="newFindingModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Log Corrective Action Finding (CAPA)</div>
+      <button onclick="closeModal('newFindingModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Finding Code *</label>
+            <input type="text" name="finding_code" class="form-control" placeholder="e.g. FND-9012" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Asynchronous Kafka offset delay during node promotion" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Related Critical Service *</label>
+            <select name="service_id" class="form-control" required>
+              {% for s in services %}
+              <option value="{{ s.id }}">{{ s.code }} - {{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Severity Level *</label>
+            <select name="severity" class="form-control">
+              <option value="Critical">Critical</option>
+              <option value="High" selected>High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Root Cause Analysis *</label>
+          <textarea name="root_cause" class="form-control" placeholder="Underlying architectural or process reason..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Remediation Action Plan *</label>
+          <textarea name="remediation_plan" class="form-control" placeholder="Planned fixes and preventative safeguards..." required></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Assigned Engineer / Lead *</label>
+            <input type="text" name="assigned_to" class="form-control" placeholder="e.g. Carlos Mendes" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Remediation Target Date *</label>
+            <input type="date" name="due_date" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('newFindingModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Finding</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal to update finding status -->
+<div class="modal-overlay" id="updateFindingModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Update Finding Status: <span id="modalFindingCode"></span></div>
+      <button onclick="closeModal('updateFindingModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_status">
+      <input type="hidden" name="finding_id" id="updateFindingId">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Remediation Status *</label>
+          <select name="status" id="updateStatusSelect" class="form-control">
+            <option value="Open">Open</option>
+            <option value="Remediation In Progress">Remediation In Progress</option>
+            <option value="Ready for Retest">Ready for Retest</option>
+            <option value="Closed & Verified">Closed & Verified</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Verification / Retesting Notes</label>
+          <textarea name="retest_notes" class="form-control" placeholder="Details of fix validation, test pass verification, or QA evidence..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('updateFindingModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Status Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function openUpdateModal(id, code, currentStatus) {
+    document.getElementById('updateFindingId').value = id;
+    document.getElementById('modalFindingCode').innerText = code;
+    document.getElementById('updateStatusSelect').value = currentStatus;
+    openModal('updateFindingModal');
+  }
+</script>
+{% endblock %}
