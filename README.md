@@ -15,6 +15,13 @@ This system replaces the conceptual React frontend proposed in `BCM.docx` with a
   - BIA Attestation lifecycle health (Attested vs Under Review vs Draft).
 - **Operational Worklists**: Pending workflow sign-offs and upcoming/recent RTEP test exercises.
 
+### 2. Role Management & User Directory (`/roles/` or `/admin/roles/`)
+- **Milestone 1 & APIs 109-111, 119-120**:
+  - **Enterprise Roles & Permissions Matrix**: Configure granular permissions (BIA Attestation, BCP Approvals, RTEP Drill Execution, DORA Third-Party Register, CAPA Finding Closure, Role Management, Audit Inspection).
+  - **User Directory & Role Assignments**: Provision new users and change role assignments on the fly with live audit logging.
+  - **Custom Role Creation**: Create customized operational resilience roles with bespoke permission matrices and color badges.
+
+
 ### 2. Critical Services Registry & Third-Party ICT (`/services/`, `/ict-third-parties/`)
 - **Service Catalog**: Service Code, Name, Tier, Business Owner, Department, RTO (Recovery Time Objective), RPO (Recovery Point Objective), MTPD (Maximum Tolerable Period of Disruption), and hourly loss exposure.
 - **Lineage & Resilience Profile**: In-depth profile for each service displaying linked BIAs, active BCPs, upstream and downstream dependencies, and past test records.

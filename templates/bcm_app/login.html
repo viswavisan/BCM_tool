@@ -1,0 +1,373 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In | ResilienceOps Enterprise BCM Portal</title>
+  <meta name="description" content="Secure Enterprise Authentication Gateway for Business Continuity Management and Operational Resilience.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- BCM CSS -->
+  <link rel="stylesheet" href="{% static 'css/bcm.css' %}">
+
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                  #070b14;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 30px 16px;
+    }
+
+    .login-container {
+      max-width: 1080px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.15);
+      overflow: hidden;
+      animation: loginFadeIn 0.35s ease-out;
+    }
+
+    @keyframes loginFadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 900px) {
+      .login-container {
+        grid-template-columns: 1fr;
+      }
+      .login-left-brand {
+        display: none;
+      }
+    }
+
+    /* Left Hero Branding */
+    .login-left-brand {
+      background: linear-gradient(145deg, #0d1424 0%, #111a30 100%);
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-left-brand::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: -100px;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .brand-hero-title {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-top: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-hero-title span {
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .feature-icon-box {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      flex-shrink: 0;
+    }
+
+    /* Right Form Area */
+    .login-form-area {
+      padding: 44px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background-color: #0c1221;
+    }
+
+    .login-header-box {
+      margin-bottom: 28px;
+    }
+
+    .login-title {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .persona-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      margin-bottom: 8px;
+    }
+
+    .persona-card:hover {
+      background-color: var(--bg-surface-hover);
+      border-color: var(--border-hover);
+      transform: translateX(4px);
+    }
+
+    .persona-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .divider-text {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 22px 0 16px;
+    }
+
+    .divider-text::before,
+    .divider-text::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .divider-text::before { margin-right: 12px; }
+    .divider-text::after { margin-left: 12px; }
+
+    .sso-btn {
+      width: 100%;
+      padding: 11px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all var(--transition-fast);
+    }
+
+    .sso-btn:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px rgba(6, 182, 212, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <!-- Left Hero & Overview -->
+    <div class="login-left-brand">
+      <div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="brand-icon" style="width:42px; height:42px; font-size:1.25rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <h2 style="font-family:var(--font-heading); color:#fff; font-size:1.35rem; font-weight:700;">ResilienceOps</h2>
+            <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase; letter-spacing:0.08em;">Enterprise BCM</span>
+          </div>
+        </div>
+
+        <h1 class="brand-hero-title">
+          Operational Resilience & <span>Continuity Cockpit</span>
+        </h1>
+        <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.6; margin-top:14px; margin-bottom:32px;">
+          Single pane of glass for Critical Services, DORA ICT third-party registries, BIA assessments, interactive dependency topologies, and automated crisis failover runbooks.
+        </p>
+
+        <div class="feature-item">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:600; color:#fff; font-size:0.92rem;">ISO 22301 & EU DORA Standardized</div>
+            <div style="font-size:0.8rem; color:var(--text-subtle);">Automated Article 28 registers, RTO/RPO limits, and annual BIA attestation.</div>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:600; color:#fff; font-size:0.92rem;">Interactive Cascading Simulation Engine</div>
+            <div style="font-size:0.8rem; color:var(--text-subtle);">Simulate cloud and data center partitions with dynamic financial loss meters.</div>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:600; color:#fff; font-size:0.92rem;">ResQ Conversational AI Assistant</div>
+            <div style="font-size:0.8rem; color:var(--text-subtle);">Context-aware reasoning across service lineage, runbooks, and recovery targets.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-subtle); padding-top:20px; border-top:1px solid var(--border-subtle);">
+        <span class="status-dot"></span>
+        <span>Secure Enclave Active &bull; Zero Trust RBAC</span>
+      </div>
+    </div>
+
+    <!-- Right Login Form -->
+    <div class="login-form-area">
+      <div class="login-header-box">
+        <h2 class="login-title">Sign In to BCM Portal</h2>
+        <p style="font-size:0.86rem; color:var(--text-muted);">
+          Authenticate with corporate credentials, SSO, or choose a demo persona below.
+        </p>
+      </div>
+
+      <!-- Flash Messages -->
+      {% if messages %}
+      <div style="margin-bottom:18px;">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" style="padding:10px 14px; font-size:0.85rem; margin-bottom:8px;">
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Standard Form -->
+      <form method="POST" id="loginForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" id="actionInput" value="credentials">
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+        <div class="form-group">
+          <label class="form-label">Username / Corporate ID</label>
+          <input type="text" name="username" id="usernameInput" class="form-control" placeholder="e.g. cro_officer or admin" required>
+        </div>
+
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+            <label class="form-label" style="margin-bottom:0;">Password</label>
+            <span style="font-size:0.75rem; color:var(--accent-cyan); cursor:pointer;" onclick="togglePasswordVisibility()">Show Password</span>
+          </div>
+          <input type="password" name="password" id="passwordInput" class="form-control" placeholder="••••••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:0.92rem; margin-top:6px;">
+          Authenticate & Enter BCM Cockpit &rarr;
+        </button>
+      </form>
+
+      <!-- Enterprise SSO Simulation -->
+      <div class="divider-text">OR ENTERPRISE SINGLE SIGN-ON</div>
+
+      <button type="button" class="sso-btn" onclick="triggerSSO('cro_officer')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Sign in with Enterprise SSO (Okta / SAML 2.0)
+      </button>
+
+      <!-- 1-Click Quick Demo Login Personas -->
+      <div class="divider-text">1-CLICK DEMO PERSONAS</div>
+      <div style="max-height:220px; overflow-y:auto; padding-right:4px;">
+        {% for p in demo_personas %}
+        <div class="persona-card" onclick="quickLogin('{{ p.username }}', '{{ p.username|yesno:"adminpassword123,bcmpassword123" }}')">
+          <div class="persona-avatar" style="background-color:{{ p.color }};">
+            {{ p.name|slice:":1" }}
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <strong style="font-size:0.86rem; color:#fff;">{{ p.name }}</strong>
+              <span class="badge badge-neutral" style="font-size:0.65rem;">{{ p.badge }}</span>
+            </div>
+            <div style="font-size:0.76rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              {{ p.role }} &bull; {{ p.dept }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById('passwordInput');
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    }
+
+    function quickLogin(username, password) {
+      document.getElementById('usernameInput').value = username;
+      document.getElementById('passwordInput').value = (username === 'admin') ? 'adminpassword123' : 'bcmpassword123';
+      document.getElementById('actionInput').value = 'quick_login';
+      document.getElementById('loginForm').submit();
+    }
+
+    function triggerSSO(username) {
+      document.getElementById('usernameInput').value = username;
+      document.getElementById('passwordInput').value = (username === 'admin') ? 'adminpassword123' : 'bcmpassword123';
+      document.getElementById('actionInput').value = 'sso_login';
+      document.getElementById('loginForm').submit();
+    }
+  </script>
+</body>
+</html>

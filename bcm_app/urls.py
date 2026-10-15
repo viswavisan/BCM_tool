@@ -2,8 +2,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Authentication & User Management (Milestone 1, APIs 83-86, 109-111, 119-120)
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('profile/', views.user_profile_view, name='user_profile'),
+    path('roles/', views.roles_management_view, name='roles_management'),
+    path('admin/roles/', views.roles_management_view, name='admin_roles'),
+    path('auth/sso/callback/', views.login_view, name='sso_callback'),
+
     # Dashboards
     path('', views.dashboard_view, name='dashboard'),
+
     
     # Critical Services Registry
     path('services/', views.services_list_view, name='services_list'),
@@ -38,8 +47,10 @@ urlpatterns = [
     # Evidence Repository
     path('evidence/', views.evidence_repository_view, name='evidence_repository'),
     
-    # Workflow & Approvals
+    # Workflow & Approvals (Workflow Inbox)
     path('approvals/', views.approval_queue_view, name='approval_queue'),
+    path('workflow/', views.approval_queue_view, name='workflow_inbox'),
+    path('inbox/', views.approval_queue_view, name='inbox'),
     
     # ResQ AI
     path('resq/', views.resq_ai_view, name='resq_ai'),

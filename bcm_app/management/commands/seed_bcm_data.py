@@ -1,12 +1,15 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta, date
+from django.contrib.auth.models import User
 from bcm_app.models import (
     CriticalService, ICTThirdParty, ServiceDependency,
     BusinessImpactAnalysis, BCPlan, BCPEmergencyContact,
     Scenario, RTEPTestExercise, Finding, EvidenceItem,
-    ApprovalTask, AuditLogEntry, Notification, ResQChatLog
+    ApprovalTask, AuditLogEntry, Notification, ResQChatLog,
+    UserProfile, RoleDefinition
 )
+
 
 class Command(BaseCommand):
     help = "Seed realistic enterprise BCM data"
@@ -404,10 +407,65 @@ class Command(BaseCommand):
              "SVC-PAY-01, SVC-CARD-04, SVC-FX-07, SVC-CORE-03, SVC-SWIFT-02")
         ]
 
-        for q, ans, matches in chat_data:
-            ResQChatLog.objects.get_or_create(
-                user_query=q,
-                defaults={"ai_response": ans, "matched_services": matches, "feedback_positive": True}
+        # 14. Standard Role Definitions (API 111: GET /admin/roles, API 119/120: Permissions)
+        roles_data = [
+            ("Chief Risk & Resilience Officer (CRO)", "ROLE_CRO", "Ultimate dual-control authority for regulatory attestations, BCP sign-offs, and board compliance reports.", "#ef4444", True, True, True, True, True, True, True),
+            ("Enterprise BCM Lead", "ROLE_BCM_LEAD", "Day-to-day governance, BIA framework management, test exercise coordination, and runbook updates.", "#10b981", True, True, True, True, True, False, True),
+            ("Critical Service Owner", "ROLE_SVC_OWNER", "Owns mission-critical application recovery tiers, initiates BIAs, and validates failover runbooks.", "#06b6d4", False, False, True, False, False, False, False),
+            ("Crisis Incident Commander", "ROLE_COMMANDER", "Coordinates live crisis response bridges, Gold Team escalations, and declares disaster failovers.", "#f59e0b", False, True, True, False, True, False, True),
+            ("Regulatory & Internal Auditor", "ROLE_AUDITOR", "Independent compliance inspections under ISO 22301 and DORA Art. 13 with read-only audit verification.", "#8b5cf6", False, False, False, False, False, False, True),
+            ("Resilience Administrator", "ROLE_ADMIN", "Full enterprise system administration, identity provisioning, and security role entitlement configuration.", "#6366f1", True, True, True, True, True, True, True),
+        ]
+
+        roles_dict = {}
+        for r_name, r_code, r_desc, r_col, bia, bcp, drills, third, findings, roles_mgr, audit_perm in roles_data:
+            r_obj, _ = RoleDefinition.objects.update_or_create(
+                code=r_code,
+                defaults={
+                    "name": r_name,
+                    "description": r_desc,
+                    "color": r_col,
+                    "can_attest_bia": bia,
+                    "can_approve_bcp": bcp,
+                    "can_execute_drills": drills,
+                    "can_manage_third_parties": third,
+                    "can_close_findings": findings,
+                    "can_manage_roles_users": roles_mgr,
+                    "can_view_audit_logs": audit_perm,
+                    "is_system_role": True,
+                }
+            )
+            roles_dict[r_code] = r_obj
+
+        # 15. Demo Users & Enterprise Profiles
+        users_config = [
+            ("admin", "Admin", "User", "admin@enterprise-bcm.bank", "adminpassword123", "Resilience Administrator", roles_dict["ROLE_ADMIN"], "Enterprise IT & Architecture", "+44 20 7946 0880", "#6366f1", True),
+            ("cro_officer", "Dr. Alistair", "Vance", "cro@enterprise-bcm.bank", "bcmpassword123", "Chief Risk & Resilience Officer (CRO)", roles_dict["ROLE_CRO"], "Executive Risk Office", "+44 20 7946 0881", "#ef4444", False),
+            ("bcm_manager", "Sarah", "Jenkins", "s.jenkins@enterprise-bcm.bank", "bcmpassword123", "Enterprise BCM Lead", roles_dict["ROLE_BCM_LEAD"], "Operational Resilience", "+44 20 7946 0882", "#10b981", False),
+            ("service_owner", "David", "Chen", "d.chen@enterprise-bcm.bank", "bcmpassword123", "Critical Service Owner", roles_dict["ROLE_SVC_OWNER"], "Payments & Retail Banking", "+44 20 7946 0883", "#06b6d4", False),
+            ("auditor", "Marcus", "Thorne", "m.thorne@enterprise-bcm.bank", "bcmpassword123", "Regulatory & Internal Auditor", roles_dict["ROLE_AUDITOR"], "Compliance & Regulatory Audit", "+44 20 7946 0884", "#8b5cf6", False),
+        ]
+
+        for username, first, last, email, pwd, role_name, r_def, dept, phone, color, is_super in users_config:
+            u, created = User.objects.get_or_create(
+                username=username,
+                defaults={"first_name": first, "last_name": last, "email": email, "is_staff": is_super, "is_superuser": is_super}
+            )
+            u.set_password(pwd)
+            u.save()
+
+            UserProfile.objects.update_or_create(
+                user=u,
+                defaults={
+                    "role_def": r_def,
+                    "role": role_name,
+                    "department": dept,
+                    "phone": phone,
+                    "sso_id": f"OKTA-{username.upper()}-881",
+                    "avatar_color": color
+                }
             )
 
-        self.stdout.write(self.style.SUCCESS("Successfully seeded enterprise BCM sample database!"))
+        self.stdout.write(self.style.SUCCESS("Successfully seeded enterprise BCM sample database, roles, and demo users!"))
+
+

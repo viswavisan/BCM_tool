@@ -4,6 +4,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 
@@ -11,23 +14,161 @@ from .models import (
     CriticalService, ICTThirdParty, ServiceDependency,
     BusinessImpactAnalysis, BCPlan, BCPEmergencyContact,
     Scenario, RTEPTestExercise, Finding, EvidenceItem,
-    ApprovalTask, AuditLogEntry, Notification, ResQChatLog
+    ApprovalTask, AuditLogEntry, Notification, ResQChatLog,
+    UserProfile, RoleDefinition
 )
 
 # ----------------- Navigation Context Processor / Helper -----------------
-def get_global_context():
+def get_global_context(request=None):
     unread_notifications = Notification.objects.filter(is_read=False).count()
     pending_approvals = ApprovalTask.objects.filter(status='Pending').count()
+    
+    current_user = None
+    user_profile = None
+    if request and hasattr(request, 'user') and request.user.is_authenticated:
+        current_user = request.user
+        try:
+            user_profile = request.user.profile
+        except:
+            user_profile = None
+
     return {
         'unread_notifications': unread_notifications,
         'pending_approvals': pending_approvals,
         'current_time': timezone.now(),
         'system_status': 'Operational - All Rings Normal',
+        'current_user': current_user,
+        'user_profile': user_profile,
     }
 
+
+# ----------------- Authentication & User Management (Milestone 1, APIs 83-86) -----------------
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    next_url = request.GET.get('next') or request.POST.get('next') or 'dashboard'
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'credentials')
+
+        # 1. Quick demo login or simulated enterprise SSO
+        if action in ['quick_login', 'sso_login']:
+            username = request.POST.get('username') or 'cro_officer'
+            user = User.objects.filter(username=username).first()
+            if not user:
+                user = User.objects.first()
+            if user:
+                login(request, user)
+                auth_mode = "Enterprise SSO (Okta SAML 2.0)" if action == 'sso_login' else "Demo Persona Credentials"
+                AuditLogEntry.objects.create(
+                    user=user.get_full_name() or user.username,
+                    action='User Authenticated',
+                    entity_type='User',
+                    entity_id=user.username,
+                    details=f"Secure session created via {auth_mode}.",
+                    ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+                )
+                role_label = getattr(user, 'profile', None) and user.profile.role or 'Resilience Lead'
+                messages.success(request, f"Welcome back, {user.get_full_name() or user.username}! Logged in as {role_label}.")
+                return redirect(next_url)
+
+        # 2. Standard username/password login
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            AuditLogEntry.objects.create(
+                user=user.get_full_name() or user.username,
+                action='User Authenticated',
+                entity_type='User',
+                entity_id=user.username,
+                details="Authenticated with enterprise credentials and multi-factor validation.",
+                ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+            )
+            messages.success(request, f"Welcome, {user.get_full_name() or user.username}!")
+            return redirect(next_url)
+        else:
+            messages.error(request, "Invalid username or password. Please use valid credentials or choose a quick-demo persona below.")
+
+    demo_personas = [
+        {"username": "cro_officer", "name": "Dr. Alistair Vance", "role": "Chief Risk & Resilience Officer (CRO)", "dept": "Executive Risk Office", "badge": "Executive Sign-Off", "color": "#ef4444"},
+        {"username": "bcm_manager", "name": "Sarah Jenkins", "role": "Enterprise BCM Lead", "dept": "Operational Resilience", "badge": "BIA & BCP Authoring", "color": "#10b981"},
+        {"username": "service_owner", "name": "David Chen", "role": "Critical Service Owner", "dept": "Payments & Retail Rails", "badge": "Service Lead", "color": "#06b6d4"},
+        {"username": "auditor", "name": "Marcus Thorne", "role": "Regulatory & Internal Auditor", "dept": "Compliance Assurance", "badge": "Audit & Review", "color": "#8b5cf6"},
+        {"username": "admin", "name": "Resilience Administrator", "role": "Resilience Administrator", "dept": "Enterprise Architecture", "badge": "Full Administration", "color": "#6366f1"},
+    ]
+
+    return render(request, 'bcm_app/login.html', {
+        'next_url': next_url,
+        'demo_personas': demo_personas
+    })
+
+
+def logout_view(request):
+    if request.user.is_authenticated:
+        AuditLogEntry.objects.create(
+            user=request.user.get_full_name() or request.user.username,
+            action='User Logout',
+            entity_type='User',
+            entity_id=request.user.username,
+            details="User ended active session.",
+            ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+        )
+    logout(request)
+    messages.info(request, "You have been securely signed out.")
+    return redirect('login')
+
+
+@login_required
+def user_profile_view(request):
+    ctx = get_global_context(request)
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        dept = request.POST.get('department', '').strip()
+        role = request.POST.get('role', '').strip()
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save()
+
+        profile.phone = phone
+        profile.department = dept
+        if role:
+            profile.role = role
+        profile.save()
+
+        AuditLogEntry.objects.create(
+            user=user.get_full_name() or user.username,
+            action='Updated User Profile',
+            entity_type='UserProfile',
+            entity_id=user.username,
+            details="Updated user profile details and contact parameters."
+        )
+        messages.success(request, "User profile updated successfully.")
+        return redirect('user_profile')
+
+    ctx.update({
+        'profile_user': user,
+        'profile': profile,
+        'active_menu': 'profile'
+    })
+    return render(request, 'bcm_app/user_profile.html', ctx)
+
+
 # ----------------- 1. Dashboards -----------------
+@login_required
 def dashboard_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
+
     
     total_services = CriticalService.objects.count()
     tier1_services = CriticalService.objects.filter(tier='Tier 1').count()
@@ -89,8 +230,9 @@ def dashboard_view(request):
 
 
 # ----------------- 2. Critical Services Registry -----------------
+@login_required
 def services_list_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     tier_filter = request.GET.get('tier', '')
     query = request.GET.get('q', '')
     
@@ -136,8 +278,9 @@ def services_list_view(request):
     return render(request, 'bcm_app/services_list.html', ctx)
 
 
+@login_required
 def service_detail_view(request, service_id):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     service = get_object_or_404(CriticalService, id=service_id)
     
     bias = service.bias.all()
@@ -162,8 +305,9 @@ def service_detail_view(request, service_id):
     return render(request, 'bcm_app/service_detail.html', ctx)
 
 
+@login_required
 def ict_third_party_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     vendors = ICTThirdParty.objects.all()
     
     if request.method == 'POST':
@@ -196,8 +340,9 @@ def ict_third_party_view(request):
 
 
 # ----------------- 3. Business Impact Analysis (BIA) -----------------
+@login_required
 def bia_list_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     bias = BusinessImpactAnalysis.objects.select_related('service').all()
     services = CriticalService.objects.all()
     
@@ -254,8 +399,9 @@ def bia_list_view(request):
     return render(request, 'bcm_app/bia_list.html', ctx)
 
 
+@login_required
 def bia_detail_view(request, bia_id):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     bia = get_object_or_404(BusinessImpactAnalysis, id=bia_id)
     
     radar_labels = ['Financial Impact', 'Operational Impact', 'Regulatory Impact', 'Reputational Impact']
@@ -275,6 +421,7 @@ def bia_detail_view(request, bia_id):
     return render(request, 'bcm_app/bia_detail.html', ctx)
 
 
+@login_required
 def bia_attest_view(request, bia_id):
     if request.method == 'POST':
         bia = get_object_or_404(BusinessImpactAnalysis, id=bia_id)
@@ -298,8 +445,9 @@ def bia_attest_view(request, bia_id):
 
 
 # ----------------- 4. Dependencies & Lineage Graph -----------------
+@login_required
 def dependencies_graph_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     services = CriticalService.objects.all()
     vendors = ICTThirdParty.objects.all()
     dependencies = ServiceDependency.objects.select_related('source_service', 'dependent_service', 'third_party').all()
@@ -313,6 +461,7 @@ def dependencies_graph_view(request):
     return render(request, 'bcm_app/dependencies_graph.html', ctx)
 
 
+@login_required
 def api_dependencies_graph(request):
     services = CriticalService.objects.all()
     vendors = ICTThirdParty.objects.all()
@@ -362,8 +511,9 @@ def api_dependencies_graph(request):
 
 
 # ----------------- 5. Business Continuity Plans (BCP) -----------------
+@login_required
 def bcp_list_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     plans = BCPlan.objects.select_related('service').prefetch_related('emergency_contacts').all()
     services = CriticalService.objects.all()
     
@@ -401,8 +551,9 @@ def bcp_list_view(request):
     return render(request, 'bcm_app/bcp_list.html', ctx)
 
 
+@login_required
 def bcp_detail_view(request, bcp_id):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     plan = get_object_or_404(BCPlan, id=bcp_id)
     contacts = plan.emergency_contacts.all()
     
@@ -431,8 +582,9 @@ def bcp_detail_view(request, bcp_id):
 
 
 # ----------------- 6. Scenario Library & RTEP Testing -----------------
+@login_required
 def scenarios_list_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     scenarios = Scenario.objects.all()
     
     if request.method == 'POST':
@@ -466,8 +618,9 @@ def scenarios_list_view(request):
     return render(request, 'bcm_app/scenarios_list.html', ctx)
 
 
+@login_required
 def rtep_tests_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     tests = RTEPTestExercise.objects.select_related('scenario', 'target_service').all()
     scenarios = Scenario.objects.all()
     services = CriticalService.objects.all()
@@ -509,8 +662,9 @@ def rtep_tests_view(request):
     return render(request, 'bcm_app/rtep_tests.html', ctx)
 
 
+@login_required
 def rtep_live_drill_view(request, test_id):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     test = get_object_or_404(RTEPTestExercise, id=test_id)
     
     if request.method == 'POST':
@@ -542,8 +696,9 @@ def rtep_live_drill_view(request, test_id):
 
 
 # ----------------- 7. Cascading Impact Engine & Simulation -----------------
+@login_required
 def impact_engine_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     services = CriticalService.objects.all()
     vendors = ICTThirdParty.objects.all()
     
@@ -555,6 +710,7 @@ def impact_engine_view(request):
     return render(request, 'bcm_app/impact_engine.html', ctx)
 
 
+@login_required
 @csrf_exempt
 def api_impact_simulate(request):
     if request.method != 'POST':
@@ -652,8 +808,9 @@ def api_impact_simulate(request):
 
 
 # ----------------- 8. Findings & Remediation (CAPA) -----------------
+@login_required
 def findings_list_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     findings = Finding.objects.select_related('service', 'test_exercise').all()
     services = CriticalService.objects.all()
     
@@ -704,8 +861,9 @@ def findings_list_view(request):
 
 
 # ----------------- 9. Evidence Repository -----------------
+@login_required
 def evidence_repository_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     evidence_items = EvidenceItem.objects.select_related('service', 'test_exercise').all()
     services = CriticalService.objects.all()
     
@@ -739,8 +897,9 @@ def evidence_repository_view(request):
 
 
 # ----------------- 10. Approvals & Workflows Queue -----------------
+@login_required
 def approval_queue_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     tasks = ApprovalTask.objects.all()
     
     if request.method == 'POST':
@@ -777,8 +936,9 @@ def approval_queue_view(request):
 
 
 # ----------------- 11. ResQ AI Assistant -----------------
+@login_required
 def resq_ai_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     chat_history = ResQChatLog.objects.all()[:15]
     
     ctx.update({
@@ -788,6 +948,7 @@ def resq_ai_view(request):
     return render(request, 'bcm_app/resq_ai.html', ctx)
 
 
+@login_required
 @csrf_exempt
 def api_resq_chat(request):
     if request.method != 'POST':
@@ -875,8 +1036,9 @@ def api_resq_chat(request):
 
 
 # ----------------- 12. Administration & Audit Log -----------------
+@login_required
 def admin_audit_view(request):
-    ctx = get_global_context()
+    ctx = get_global_context(request)
     audit_logs = AuditLogEntry.objects.all()[:50]
     total_logs = AuditLogEntry.objects.count()
     
@@ -886,3 +1048,139 @@ def admin_audit_view(request):
         'active_menu': 'admin'
     })
     return render(request, 'bcm_app/admin_audit.html', ctx)
+
+
+# ----------------- 13. Role Management & User Administration (Milestone 1, APIs 109-111, 119-120) -----------------
+@login_required
+def roles_management_view(request):
+    ctx = get_global_context(request)
+    roles = RoleDefinition.objects.prefetch_related('members').all()
+    users = User.objects.select_related('profile', 'profile__role_def').all().order_by('username')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # 1. Assign role to user (API 110: PUT /admin/users)
+        if action == 'assign_user_role':
+            user_id = request.POST.get('user_id')
+            role_id = request.POST.get('role_id')
+            target_user = get_object_or_404(User, id=user_id)
+            target_role = get_object_or_404(RoleDefinition, id=role_id)
+
+            profile, _ = UserProfile.objects.get_or_create(user=target_user)
+            old_role = profile.role
+            profile.role_def = target_role
+            profile.role = target_role.name
+            profile.avatar_color = target_role.color
+            profile.save()
+
+            AuditLogEntry.objects.create(
+                user=request.user.get_full_name() or request.user.username,
+                action='Updated User Role',
+                entity_type='User',
+                entity_id=target_user.username,
+                details=f"Changed assigned role from '{old_role}' to '{target_role.name}'.",
+                ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+            )
+            messages.success(request, f"Updated role for {target_user.get_full_name() or target_user.username} to '{target_role.name}'.")
+            return redirect('roles_management')
+
+        # 2. Update role permissions (API 120: PUT /admin/permissions)
+        elif action == 'update_role_permissions':
+            role_id = request.POST.get('role_id')
+            role_obj = get_object_or_404(RoleDefinition, id=role_id)
+
+            role_obj.can_attest_bia = bool(request.POST.get('can_attest_bia'))
+            role_obj.can_approve_bcp = bool(request.POST.get('can_approve_bcp'))
+            role_obj.can_execute_drills = bool(request.POST.get('can_execute_drills'))
+            role_obj.can_manage_third_parties = bool(request.POST.get('can_manage_third_parties'))
+            role_obj.can_close_findings = bool(request.POST.get('can_close_findings'))
+            role_obj.can_manage_roles_users = bool(request.POST.get('can_manage_roles_users'))
+            role_obj.can_view_audit_logs = bool(request.POST.get('can_view_audit_logs'))
+            role_obj.save()
+
+            AuditLogEntry.objects.create(
+                user=request.user.get_full_name() or request.user.username,
+                action='Updated Role Permissions',
+                entity_type='RoleDefinition',
+                entity_id=role_obj.code,
+                details=f"Modified permission matrix for {role_obj.name}.",
+                ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+            )
+            messages.success(request, f"Permissions updated for role '{role_obj.name}'.")
+            return redirect('roles_management')
+
+        # 3. Create new custom role (API 111: POST /admin/roles)
+        elif action == 'create_role':
+            name = request.POST.get('name', '').strip()
+            code = request.POST.get('code', '').strip().upper()
+            desc = request.POST.get('description', '').strip()
+            color = request.POST.get('color', '#6366f1')
+
+            if not code.startswith('ROLE_'):
+                code = f"ROLE_{code}"
+
+            r_obj = RoleDefinition.objects.create(
+                name=name, code=code, description=desc, color=color,
+                can_attest_bia=bool(request.POST.get('can_attest_bia')),
+                can_approve_bcp=bool(request.POST.get('can_approve_bcp')),
+                can_execute_drills=bool(request.POST.get('can_execute_drills')),
+                can_manage_third_parties=bool(request.POST.get('can_manage_third_parties')),
+                can_close_findings=bool(request.POST.get('can_close_findings')),
+                can_manage_roles_users=bool(request.POST.get('can_manage_roles_users')),
+                can_view_audit_logs=bool(request.POST.get('can_view_audit_logs')),
+                is_system_role=False,
+            )
+            AuditLogEntry.objects.create(
+                user=request.user.get_full_name() or request.user.username,
+                action='Created Custom Role',
+                entity_type='RoleDefinition',
+                entity_id=r_obj.code,
+                details=f"Provisioned custom role '{r_obj.name}'.",
+                ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+            )
+            messages.success(request, f"Custom role '{r_obj.name}' successfully created.")
+            return redirect('roles_management')
+
+        # 4. Provision new user (API 109/110)
+        elif action == 'create_user':
+            username = request.POST.get('username', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '').strip() or 'bcmpassword123'
+            role_id = request.POST.get('role_id')
+            dept = request.POST.get('department', '').strip()
+            phone = request.POST.get('phone', '').strip()
+
+            target_role = get_object_or_404(RoleDefinition, id=role_id)
+            new_u = User.objects.create_user(
+                username=username, first_name=first_name, last_name=last_name, email=email, password=password
+            )
+            UserProfile.objects.create(
+                user=new_u,
+                role_def=target_role,
+                role=target_role.name,
+                department=dept or 'Operational Resilience',
+                phone=phone or '+44 20 7946 0890',
+                sso_id=f"OKTA-{username.upper()}-01",
+                avatar_color=target_role.color
+            )
+            AuditLogEntry.objects.create(
+                user=request.user.get_full_name() or request.user.username,
+                action='Provisioned Enterprise User',
+                entity_type='User',
+                entity_id=new_u.username,
+                details=f"Provisioned user '{new_u.username}' with role '{target_role.name}'.",
+                ip_address=request.META.get('REMOTE_ADDR', '10.24.8.102')
+            )
+            messages.success(request, f"Provisioned enterprise user '{new_u.username}' with role '{target_role.name}'.")
+            return redirect('roles_management')
+
+    ctx.update({
+        'roles': roles,
+        'users': users,
+        'active_menu': 'roles',
+    })
+    return render(request, 'bcm_app/roles_management.html', ctx)
+

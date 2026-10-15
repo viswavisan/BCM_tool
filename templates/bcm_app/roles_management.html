@@ -1,0 +1,437 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}Role Management & Access Control | ResilienceOps BCM{% endblock %}
+{% block page_title %}Role Management & RBAC Permissions (API 109-111, 119-120){% endblock %}
+
+{% block content %}
+<!-- Top Metrics Summary -->
+<div class="stats-grid">
+  <div class="stat-card card-cyan">
+    <div class="stat-header">
+      <span class="stat-title">Defined Roles</span>
+      <div class="stat-icon" style="color:var(--accent-cyan);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color:var(--accent-cyan);">{{ roles.count }}</div>
+    <div class="stat-subtitle">Granular RBAC profiles configured</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Provisioned Users</span>
+      <div class="stat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+    </div>
+    <div class="stat-value">{{ users.count }}</div>
+    <div class="stat-subtitle">Directory members with active credentials</div>
+  </div>
+
+  <div class="stat-card card-danger">
+    <div class="stat-header">
+      <span class="stat-title">Sign-off Authorities</span>
+      <div class="stat-icon" style="color:var(--danger)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color:var(--danger);">2 Roles</div>
+    <div class="stat-subtitle">Empowered for BIA & BCP sign-off</div>
+  </div>
+
+  <div class="stat-card card-success">
+    <div class="stat-header">
+      <span class="stat-title">Identity Enclave</span>
+      <div class="stat-icon" style="color:var(--success)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color:var(--success)">Okta SSO</div>
+    <div class="stat-subtitle">SAML 2.0 zero-trust federation</div>
+  </div>
+</div>
+
+<!-- Section 1: Defined Roles & Permissions Matrix -->
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Enterprise Roles & Permissions Matrix (API 111 & 119/120)
+      </div>
+      <div class="panel-subtitle">Dual-control segregation of duties compliant with ISO 22301 and DORA Article 9</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('createRoleModal')" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        + Create Custom Role
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>Role Title & Code</th>
+          <th>Members</th>
+          <th>Attest BIA</th>
+          <th>Approve BCP</th>
+          <th>Execute Drills</th>
+          <th>Manage Vendors</th>
+          <th>Close Findings</th>
+          <th>Manage Roles</th>
+          <th>View Audits</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in roles %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="width:10px; height:10px; border-radius:50%; background:{{ r.color }};"></span>
+              <strong style="color:#fff; font-size:0.92rem;">{{ r.name }}</strong>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-subtle); margin-top:2px;">
+              <code>{{ r.code }}</code> &bull; {{ r.description|truncatechars:45 }}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-neutral">{{ r.members.count }} users</span>
+          </td>
+          <td>
+            {% if r.can_attest_bia %}<span style="color:var(--success); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_approve_bcp %}<span style="color:var(--success); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_execute_drills %}<span style="color:var(--accent-cyan); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_manage_third_parties %}<span style="color:var(--success); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_close_findings %}<span style="color:var(--warning); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_manage_roles_users %}<span style="color:var(--danger); font-weight:700;">&#10003; Full</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            {% if r.can_view_audit_logs %}<span style="color:var(--success); font-weight:700;">&#10003; Yes</span>{% else %}<span style="color:var(--text-subtle);">&mdash;</span>{% endif %}
+          </td>
+          <td>
+            <button onclick="openEditPermissionsModal('{{ r.id }}', '{{ r.name }}', {{ r.can_attest_bia|yesno:'true,false' }}, {{ r.can_approve_bcp|yesno:'true,false' }}, {{ r.can_execute_drills|yesno:'true,false' }}, {{ r.can_manage_third_parties|yesno:'true,false' }}, {{ r.can_close_findings|yesno:'true,false' }}, {{ r.can_manage_roles_users|yesno:'true,false' }}, {{ r.can_view_audit_logs|yesno:'true,false' }})" class="btn btn-secondary btn-sm">
+              Configure
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align:center; color:var(--text-muted); padding:30px;">No roles defined.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 2: User Directory & Role Assignment Roster -->
+<div class="panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        User Directory & Role Assignments (API 109: GET /admin/users, API 110: PUT /admin/users)
+      </div>
+      <div class="panel-subtitle">Manage user entitlements and reassign governance roles</div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="openModal('createUserModal')" class="btn btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        + Provision User
+      </button>
+    </div>
+  </div>
+
+  <div class="bcm-table-container">
+    <table class="bcm-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Corporate Email</th>
+          <th>Department</th>
+          <th>Assigned Governance Role</th>
+          <th>SSO Identity</th>
+          <th>Account Status</th>
+          <th>Role Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="width:32px; height:32px; border-radius:50%; background:{{ u.profile.avatar_color|default:'#6366f1' }}; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem;">
+                {{ u.first_name|default:u.username|slice:":1" }}
+              </span>
+              <div>
+                <strong style="color:#fff;">{{ u.get_full_name|default:u.username }}</strong>
+                <div style="font-size:0.75rem; color:var(--text-subtle);">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:0.85rem; color:var(--text-muted);">{{ u.email }}</td>
+          <td>{{ u.profile.department|default:"Operational Resilience" }}</td>
+          <td>
+            <span class="badge" style="background-color:rgba(99, 102, 241, 0.15); color:{{ u.profile.avatar_color|default:'#6366f1' }}; border:1px solid rgba(99, 102, 241, 0.3);">
+              {{ u.profile.role|default:"User" }}
+            </span>
+          </td>
+          <td style="font-family:monospace; font-size:0.8rem; color:var(--accent-cyan);">{{ u.profile.sso_id|default:"SAML-ACTIVE" }}</td>
+          <td>
+            <span class="badge badge-success">&#9679; Active</span>
+          </td>
+          <td>
+            <button onclick="openAssignRoleModal('{{ u.id }}', '{{ u.get_full_name|default:u.username }}', '{{ u.profile.role_def.id|default:'' }}')" class="btn btn-primary btn-sm">
+              Change Role
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">No users found in directory.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Assign User Role -->
+<div class="modal-overlay" id="assignRoleModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Change Assigned Governance Role</div>
+      <button onclick="closeModal('assignRoleModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="assign_user_role">
+      <input type="hidden" name="user_id" id="assignUserId">
+      <div class="modal-body">
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:16px;">
+          Reassign governance role and permissions for user: <strong id="assignUserName" style="color:#fff;"></strong>
+        </p>
+        <div class="form-group">
+          <label class="form-label">Select Target Role *</label>
+          <select name="role_id" id="assignRoleSelect" class="form-control" required>
+            {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.name }} ({{ r.code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('assignRoleModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save & Apply Role</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Role Permissions -->
+<div class="modal-overlay" id="editPermissionsModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Configure Permissions: <span id="editRoleName" style="color:var(--accent-cyan)"></span></div>
+      <button onclick="closeModal('editPermissionsModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_role_permissions">
+      <input type="hidden" name="role_id" id="editRoleId">
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_attest_bia" id="perm_can_attest_bia" value="1">
+            <span><strong>Attest BIA Assessments</strong> — Formal ISO 22301 sign-off</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_approve_bcp" id="perm_can_approve_bcp" value="1">
+            <span><strong>Approve Continuity Plans & Runbooks</strong> — Publish and activate BCPs</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_execute_drills" id="perm_can_execute_drills" value="1">
+            <span><strong>Execute RTEP Drills</strong> — Launch live exercises and log stopwatch times</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_manage_third_parties" id="perm_can_manage_third_parties" value="1">
+            <span><strong>Manage DORA Third-Party Register</strong> — Add and modify cloud/ICT vendors</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_close_findings" id="perm_can_close_findings" value="1">
+            <span><strong>Verify & Close CAPA Findings</strong> — Corrective action verification</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_manage_roles_users" id="perm_can_manage_roles_users" value="1">
+            <span><strong>Manage Roles & Entitlements</strong> — Provision users and reassign roles</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="can_view_audit_logs" id="perm_can_view_audit_logs" value="1">
+            <span><strong>View Immutable Audit Trails</strong> — Inspect system security logs</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('editPermissionsModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Entitlement Matrix</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Create Custom Role -->
+<div class="modal-overlay" id="createRoleModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Create Custom Governance Role (API 111)</div>
+      <button onclick="closeModal('createRoleModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_role">
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Role Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Crisis Communications Lead" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role Code *</label>
+            <input type="text" name="code" class="form-control" placeholder="ROLE_COMMS" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Role Description</label>
+          <input type="text" name="description" class="form-control" placeholder="Scope and governance responsibilities...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Badge Color</label>
+          <input type="color" name="color" value="#06b6d4" style="height:38px; width:80px; background:transparent; border:none; cursor:pointer;">
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-subtle);">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" name="can_execute_drills" value="1">
+            <span style="font-size:0.86rem; color:#fff;">Can Execute RTEP Drills</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" name="can_view_audit_logs" value="1" checked>
+            <span style="font-size:0.86rem; color:#fff;">Can View System Audit Logs</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('createRoleModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Role</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Provision User -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Provision Enterprise User (API 109/110)</div>
+      <button onclick="closeModal('createUserModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem;">&times;</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_user">
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" name="first_name" class="form-control" placeholder="e.g. Rachel" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input type="text" name="last_name" class="form-control" placeholder="e.g. Sterling" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Username *</label>
+            <input type="text" name="username" class="form-control" placeholder="e.g. r_sterling" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Corporate Email *</label>
+            <input type="email" name="email" class="form-control" placeholder="r.sterling@enterprise-bcm.bank" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Department *</label>
+            <input type="text" name="department" class="form-control" placeholder="Treasury & Settlement" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign Initial Role *</label>
+            <select name="role_id" class="form-control" required>
+              {% for r in roles %}
+              <option value="{{ r.id }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Direct Incident Phone</label>
+          <input type="text" name="phone" class="form-control" placeholder="+44 20 7946 0891">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Temporary Password</label>
+          <input type="password" name="password" class="form-control" value="bcmpassword123">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal('createUserModal')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Provision User</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function openAssignRoleModal(userId, userName, currentRoleId) {
+    document.getElementById('assignUserId').value = userId;
+    document.getElementById('assignUserName').innerText = userName;
+    if (currentRoleId) {
+      document.getElementById('assignRoleSelect').value = currentRoleId;
+    }
+    openModal('assignRoleModal');
+  }
+
+  function openEditPermissionsModal(roleId, roleName, bia, bcp, drills, third, findings, roles_users, audits) {
+    document.getElementById('editRoleId').value = roleId;
+    document.getElementById('editRoleName').innerText = roleName;
+    document.getElementById('perm_can_attest_bia').checked = bia;
+    document.getElementById('perm_can_approve_bcp').checked = bcp;
+    document.getElementById('perm_can_execute_drills').checked = drills;
+    document.getElementById('perm_can_manage_third_parties').checked = third;
+    document.getElementById('perm_can_close_findings').checked = findings;
+    document.getElementById('perm_can_manage_roles_users').checked = roles_users;
+    document.getElementById('perm_can_view_audit_logs').checked = audits;
+    openModal('editPermissionsModal');
+  }
+</script>
+{% endblock %}

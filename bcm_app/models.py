@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 class CriticalService(models.Model):
     TIER_CHOICES = [
@@ -417,3 +419,50 @@ class ResQChatLog(models.Model):
 
     def __str__(self):
         return f"Query: {self.user_query[:50]}"
+
+
+class RoleDefinition(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    code = models.CharField(max_length=40, unique=True)
+    description = models.TextField(blank=True)
+    color = models.CharField(max_length=20, default="#6366f1")
+
+    # Granular Permissions (API 119/120: GET/PUT /admin/permissions)
+    can_attest_bia = models.BooleanField(default=False, help_text="Formal BIA sign-off & attestation")
+    can_approve_bcp = models.BooleanField(default=False, help_text="Approve continuity plans & runbooks")
+    can_execute_drills = models.BooleanField(default=False, help_text="Run RTEP tests & log stopwatch results")
+    can_manage_third_parties = models.BooleanField(default=False, help_text="Manage DORA ICT vendor register")
+    can_close_findings = models.BooleanField(default=False, help_text="Verify & close CAPA findings")
+    can_manage_roles_users = models.BooleanField(default=False, help_text="Assign roles and user entitlements")
+    can_view_audit_logs = models.BooleanField(default=True, help_text="Inspect tamper-evident system logs")
+    is_system_role = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('Chief Risk & Resilience Officer', 'Chief Risk & Resilience Officer (CRO)'),
+        ('Enterprise BCM Lead', 'Enterprise BCM Lead / Manager'),
+        ('Critical Service Owner', 'Critical Service Owner'),
+        ('Crisis Incident Commander', 'Crisis Incident Commander'),
+        ('Regulatory / Internal Auditor', 'Regulatory / Internal Auditor'),
+        ('Resilience Administrator', 'Resilience Administrator'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role_def = models.ForeignKey(RoleDefinition, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
+    role = models.CharField(max_length=60, choices=ROLE_CHOICES, default='Chief Risk & Resilience Officer')
+    department = models.CharField(max_length=120, default='Operational Resilience & Risk Management')
+    phone = models.CharField(max_length=40, blank=True, default='+44 20 7946 0880')
+    sso_id = models.CharField(max_length=80, blank=True, default='OKTA-SSO-ENT-01')
+    avatar_color = models.CharField(max_length=20, default='#6366f1')
+
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} ({self.role})"
+
+

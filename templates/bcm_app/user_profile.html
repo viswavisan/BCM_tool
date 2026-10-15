@@ -1,0 +1,121 @@
+{% extends 'bcm_app/base.html' %}
+
+{% block title %}User Profile & Identity | ResilienceOps{% endblock %}
+{% block page_title %}User Profile & Access Identity (API 84/85: /users/me){% endblock %}
+
+{% block content %}
+<div class="panel" style="border-left:4px solid var(--accent-cyan);">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <div style="width:58px; height:58px; border-radius:50%; background-color:{{ profile.avatar_color|default:'#6366f1' }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.6rem; font-weight:800; font-family:var(--font-heading); box-shadow:0 0 20px rgba(99,102,241,0.3);">
+        {{ profile_user.first_name|default:profile_user.username|slice:":1" }}
+      </div>
+      <div>
+        <h2 style="font-family:var(--font-heading); color:#fff; font-size:1.5rem; margin-bottom:4px;">
+          {{ profile_user.get_full_name|default:profile_user.username }}
+        </h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="badge badge-success">{{ profile.role }}</span>
+          <span style="font-size:0.82rem; color:var(--text-muted);">{{ profile.department }}</span>
+          <span class="badge badge-neutral">{{ profile.sso_id }}</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        Sign Out
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="charts-dual-grid">
+  <!-- Profile Edit Form -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Personal Information & Operational Contacts
+      </div>
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="form-group">
+          <label class="form-label">First Name *</label>
+          <input type="text" name="first_name" class="form-control" value="{{ profile_user.first_name }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name *</label>
+          <input type="text" name="last_name" class="form-control" value="{{ profile_user.last_name }}" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Corporate Email *</label>
+        <input type="email" name="email" class="form-control" value="{{ profile_user.email }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Direct Incident Hotline / Phone *</label>
+        <input type="text" name="phone" class="form-control" value="{{ profile.phone }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Department / Unit *</label>
+        <input type="text" name="department" class="form-control" value="{{ profile.department }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Assigned Governance Role</label>
+        <select name="role" class="form-control">
+          {% for r_code, r_label in profile.ROLE_CHOICES %}
+          <option value="{{ r_code }}" {% if profile.role == r_code %}selected{% endif %}>{{ r_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Save Profile Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- SSO & Security Attributes -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        SSO & Zero-Trust Telemetry
+      </div>
+    </div>
+
+    <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Identity Provider (IdP)</div>
+      <div style="font-weight:700; color:#fff; font-size:1.1rem; margin-top:3px;">Corporate Okta / SAML 2.0</div>
+      <div style="font-size:0.8rem; color:var(--accent-cyan); font-family:monospace; margin-top:2px;">SSO Identifier: {{ profile.sso_id }}</div>
+    </div>
+
+    <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase;">Multi-Factor Authentication (MFA)</div>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+        <span class="status-dot"></span>
+        <span style="font-weight:600; color:var(--success);">FIDO2 / Hardware Security Token Enforced</span>
+      </div>
+    </div>
+
+    <div style="background:var(--bg-surface-alt); border-radius:var(--radius-md); padding:16px;">
+      <div style="font-size:0.75rem; color:var(--text-subtle); text-transform:uppercase; margin-bottom:8px;">Active Role Permissions</div>
+      <div style="display:flex; flex-direction:column; gap:6px; font-size:0.82rem; color:var(--text-muted);">
+        <div>&bull; BIA Lifecycle Attestation & Sign-Off</div>
+        <div>&bull; Dual-Control Workflow Approvals</div>
+        <div>&bull; RTEP Disaster Drill Execution & Stopwatch Logging</div>
+        <div>&bull; Full Access to Cascading Impact Engine</div>
+        <div>&bull; DORA Third-Party Register Modification</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
