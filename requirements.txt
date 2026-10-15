@@ -1,4 +1,6 @@
-Django>=5.0,<7.0
-asgiref>=3.8.0
-sqlparse>=0.5.0
+# Python 3.9.x Compatibility
+# Note: Django 5.0+ requires Python 3.10+. Django 4.2 LTS is the official Long-Term Support release for Python 3.9.
+Django>=4.2.0,<5.0
+asgiref>=3.6.0,<=3.8.1
+sqlparse>=0.4.4,<=0.5.3
 tzdata>=2024.1
