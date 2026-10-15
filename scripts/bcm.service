@@ -1,0 +1,12 @@
+[Unit]
+Description=BCM API Service
+After=network.target
+
+[Service]
+User=opc
+WorkingDirectory=/home/opc/BCM_tool
+ExecStart=/home/opc/BCM_tool/venv/bin/python3 /home/opc/BCM_tool/manage.py runserver 0.0.0.0:8080
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
